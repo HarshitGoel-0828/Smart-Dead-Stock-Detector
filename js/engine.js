@@ -28,6 +28,11 @@
       if (today && date > today) return "Sale date cannot be in the future.";
       return "";
     },
+    // Case-insensitive duplicate check on name + category (the CSV import already merges on the same key).
+    isDuplicate(products, name, category, exceptId) {
+      const n = String(name || "").trim().toLowerCase(), c = String(category || "General").trim().toLowerCase();
+      return products.some(p => p.id !== exceptId && p.name.trim().toLowerCase() === n && String(p.category || "General").trim().toLowerCase() === c);
+    },
     soldInPeriod(productId, sales, days, now) {
       const cutoff = new Date(now || Date.now()); cutoff.setDate(cutoff.getDate() - days);
       return sales.filter(s => s.productId === productId && new Date(s.date) >= cutoff)

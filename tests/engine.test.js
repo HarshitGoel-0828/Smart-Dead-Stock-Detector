@@ -62,3 +62,9 @@ test("validateSale checks quantity, stock left and date", () => {
   assert.match(E.validateSale(1, 10, "2026-11-30", "2026-11-23"), /future/);
   assert.match(E.validateSale(1, 10, "", "2026-11-23"), /valid date/);
 });
+test("isDuplicate ignores case/spacing and can exclude the product being edited", () => {
+  const list = [{ id: "p1", name: "USB Cable", category: "Accessories" }];
+  assert.equal(E.isDuplicate(list, " usb cable ", "accessories"), true);
+  assert.equal(E.isDuplicate(list, "USB Cable", "Home"), false);
+  assert.equal(E.isDuplicate(list, "USB Cable", "Accessories", "p1"), false);
+});

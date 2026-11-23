@@ -756,7 +756,10 @@
       stock: Math.round(parseFloat($("#f_stock").value) || 0), added: todayISO(),
       cost: parseFloat($("#f_cost").value) || 0,
     };
-    const list = Store.products(); list.push(p); Store.saveProducts(list);
+    if (!p.name){ toast("Enter a product name."); return; }
+    const list = Store.products();
+    if (Engine.isDuplicate(list, p.name, p.category)){ toast(p.name + " already exists in " + p.category + ". Edit it instead."); return; }
+    list.push(p); Store.saveProducts(list);
     renderAll();
     e.target.reset();
     renderFormPreview();
