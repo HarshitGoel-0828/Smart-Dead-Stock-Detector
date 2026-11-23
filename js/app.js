@@ -161,6 +161,7 @@
      ============================================================ */
   let activeFilter = "ALL";
   let searchTerm = "";
+  let sortKey = null, sortDir = "asc";
   let prevAlerts = null;
 
   function trackingDays(){
@@ -436,11 +437,13 @@
     if (!tbody) return;
     tbody.innerHTML = "";
 
-    const filtered = data.filter(r => {
+    let filtered = data.filter(r => {
       const matchesFilter = activeFilter === "ALL" || r.status === activeFilter;
       const matchesSearch = r.name.toLowerCase().includes(searchTerm.toLowerCase());
       return matchesFilter && matchesSearch;
     });
+
+    if (sortKey && tbodyId === "ledgerBodyFull") filtered = Engine.sortRows(filtered, sortKey, sortDir);
 
     if (!filtered.length){
       tbody.innerHTML = '<tr><td colspan="13" style="color:var(--muted); padding:24px 12px;">' +
@@ -612,6 +615,13 @@
     });
   });
   $("#searchBox2").addEventListener("input", (e) => { searchTerm = e.target.value; renderAll(); });
+  // Click a column heading to sort; click again to reverse.
+  $all("th.sortable").forEach(th => th.querySelector("button").addEventListener("click", () => {
+    const key = th.dataset.sort;
+    sortDir = (sortKey === key && sortDir === "asc") ? "desc" : "asc"; sortKey = key;
+    $all("th.sortable").forEach(x => x.setAttribute("aria-sort", x === th ? (sortDir === "asc" ? "ascending" : "descending") : "none"));
+    renderAll();
+  }));
   $("#trackingPeriod").addEventListener("change", renderAll);
 
   /* ============================================================
