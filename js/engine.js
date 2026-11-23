@@ -48,6 +48,27 @@
       if (this.isDuplicate(products, name, category, exceptId)) return { error: name + " already exists in " + category + "." };
       return { error: "", product: { name, category, stock, cost } };
     },
+    // Keeps only the newest `perProduct` snapshots for each product so one busy product cannot push out the rest.
+    trimHistory(hist, perProduct) {
+      const keep = perProduct || 30, seen = {}, out = [];
+      for (let i = hist.length - 1; i >= 0; i--) {
+        const k = hist[i].productId; seen[k] = (seen[k] || 0) + 1;
+        if (seen[k] <= keep) out.push(hist[i]);
+      }
+      return out.reverse();
+    },
+    // Sorts table rows by a column key. Text sorts A-Z, numbers sort low-high; nulls always go last.
+    sortRows(rows, key, dir) {
+      const m = dir === "desc" ? -1 : 1;
+      return rows.slice().sort((a, b) => {
+        const x = a[key], y = b[key];
+        if (x == null && y == null) return 0;
+        if (x == null) return 1;
+        if (y == null) return -1;
+        if (typeof x === "string" || typeof y === "string") return m * String(x).localeCompare(String(y), undefined, { sensitivity: "base" });
+        return m * (x - y);
+      });
+    },
     // Validates a backup file before it replaces the shop's data. Returns an error message or "".
     validateBackup(d) {
       if (!d || d.app !== "smart-dead-stock-detector") return "That file is not a valid backup.";

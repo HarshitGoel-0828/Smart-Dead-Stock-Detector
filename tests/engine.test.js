@@ -128,3 +128,14 @@ test("validateProduct cleans input and rejects bad values", () => {
   assert.match(E.validateProduct({ name: "usb cable", category: "accessories", stock: 1, cost: 1 }, list).error, /already exists/);
   assert.equal(E.validateProduct({ name: "usb cable", category: "accessories", stock: 1, cost: 1 }, list, "p1").error, "");
 });
+test("trimHistory keeps the newest N snapshots per product and preserves order", () => {
+  const h = [{ productId: "a", ts: 1 }, { productId: "a", ts: 2 }, { productId: "b", ts: 3 }, { productId: "a", ts: 4 }];
+  assert.deepEqual(E.trimHistory(h, 2).map(x => x.ts), [2, 3, 4]);
+  assert.equal(E.trimHistory(h, 10).length, 4);
+});
+test("sortRows sorts text and numbers, with nulls last", () => {
+  const rows = [{ n: "b", v: 5 }, { n: "A", v: null }, { n: "c", v: 1 }];
+  assert.deepEqual(E.sortRows(rows, "n", "asc").map(x => x.n), ["A", "b", "c"]);
+  assert.deepEqual(E.sortRows(rows, "v", "asc").map(x => x.v), [1, 5, null]);
+  assert.deepEqual(E.sortRows(rows, "v", "desc").map(x => x.v), [5, 1, null]);
+});

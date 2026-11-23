@@ -797,14 +797,14 @@
     if (!r) return;
     const hist = Store.history();
     hist.push({ ts: Date.now(), productId: r.id, name: r.name, str: r.str, locked: r.locked, risk: r.risk, status: r.status });
-    Store.saveHistory(hist.slice(-200)); // cap log length
+    Store.saveHistory(Engine.trimHistory(hist, 30)); // keep the newest 30 snapshots per product
   }
   function snapshotAll(){
     const data = rows();
     const hist = Store.history();
     const now = Date.now();
     data.forEach(r => hist.push({ ts: now, productId: r.id, name: r.name, str: r.str, locked: r.locked, risk: r.risk, status: r.status }));
-    Store.saveHistory(hist.slice(-200));
+    Store.saveHistory(Engine.trimHistory(hist, 30));
     renderAll();
   }
   $("#snapshotBtn").addEventListener("click", snapshotAll);
