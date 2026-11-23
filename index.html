@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#17181A">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='4' fill='%2317181A' stroke='%236FA3AE' stroke-width='2'/%3E%3Ctext x='16' y='21' font-size='11' text-anchor='middle' fill='%236FA3AE' font-family='monospace'%3ESDD%3C/text%3E%3C/svg%3E">
+<title>Smart Dead Stock Detector</title>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ===================== AUTH GATE ===================== -->
+<div id="authScreen" class="auth-screen">
+  <div class="auth-card">
+    <div class="auth-mark">SDD</div>
+    <h1>Smart Dead Stock Detector</h1>
+    <p class="auth-tag">Sign in to manage your shop's inventory.</p>
+
+    <div class="auth-tabs">
+      <button class="auth-tab is-active" data-tab="login">Log in</button>
+      <button class="auth-tab" data-tab="register">Register shop</button>
+    </div>
+
+    <form id="loginForm" class="auth-form">
+      <label class="field">
+        <span>Username</span>
+        <input required id="li_username" type="text" autocomplete="username">
+      </label>
+      <label class="field">
+        <span>Password</span>
+        <input required id="li_password" type="password" autocomplete="current-password">
+      </label>
+      <button type="submit" class="btn-primary btn-block">Log in</button>
+      <p class="auth-msg" id="loginMsg"></p>
+    </form>
+
+    <form id="registerForm" class="auth-form" hidden>
+      <label class="field">
+        <span>Shop name</span>
+        <input required id="rg_shop" type="text" placeholder="e.g. Verma General Store">
+      </label>
+      <label class="field">
+        <span>Username</span>
+        <input required id="rg_username" type="text" autocomplete="username">
+      </label>
+      <label class="field">
+        <span>Password</span>
+        <input required id="rg_password" type="password" minlength="8" autocomplete="new-password">
+      </label>
+      <label class="field">
+        <span>Confirm password</span>
+        <input required id="rg_password2" type="password" autocomplete="new-password">
+      </label>
+      <button type="submit" class="btn-primary btn-block">Create account</button>
+      <p class="auth-msg" id="registerMsg"></p>
+    </form>
+  </div>
+  <p class="auth-footnote">&copy; Smart Dead Stock Detector &middot; Inventory intelligence for your shop</p>
+</div>
+
+<!-- ===================== APP ===================== -->
+<div class="app" id="appShell" hidden>
+
+  <!-- ===================== SIDEBAR ===================== -->
+  <aside class="rail">
+    <div class="rail-brand">
+      <span class="rail-mark">SDD</span>
+      <div class="rail-name">
+        <strong>Smart Dead<br>Stock Detector</strong>
+      </div>
+      <button type="button" id="navToggle" class="rail-toggle" aria-label="Open menu" aria-expanded="false">&#9776;</button>
+    </div>
+
+    <nav class="rail-nav">
+      <button class="rail-link is-active" data-view="dashboard">
+        <span class="rail-link-num">01</span> Dashboard 
+      </button>
+      <button class="rail-link" data-view="ledger">
+        <span class="rail-link-num">02</span> Products 
+      </button>
+      <button class="rail-link" data-view="sale">
+        <span class="rail-link-num">03</span> Record Sale 
+      </button>
+      <button class="rail-link" data-view="alerts">
+        <span class="rail-link-num">04</span> Alerts <span class="rail-badge" id="navAlertCount" hidden>0</span>
+      </button>
+      <button class="rail-link" data-view="history">
+        <span class="rail-link-num">05</span> Classification History 
+      </button>
+      <button class="rail-link" data-view="settings">
+        <span class="rail-link-num">06</span> Settings 
+      </button>
+    </nav>
+
+    <div class="rail-foot">
+      <p>Tracking period</p>
+      <select id="trackingPeriod">
+        <option value="30">Last 30 days</option>
+        <option value="60">Last 60 days</option>
+        <option value="90">Last 90 days</option>
+      </select>
+      <button id="exportCsv" class="rail-export">Export report (.csv)</button>
+      <button id="logoutBtn" class="rail-logout">Log out</button>
+    </div>
+  </aside>
+
+  <!-- ===================== MAIN ===================== -->
+  <main class="main">
+
+    <div class="topbar">
+      <div class="bell-wrap" id="bellWrap">
+        <button type="button" id="bellBtn" class="bell-btn" aria-label="Reorder alerts" aria-expanded="false">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 10-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 01-3.4 0"/></svg>
+          <span class="badge" id="bellCount" hidden>0</span>
+        </button>
+        <div class="bell-menu" id="bellMenu" hidden>
+          <div class="bell-head"><strong>Reorder alerts</strong></div>
+          <ul id="bellList" class="bell-list"></ul>
+          <button type="button" class="bell-foot" data-go="alerts">View all alerts</button>
+        </div>
+      </div>
+      <div class="topbar-shop">
+        <span class="avatar" id="topbarAvatar">S</span>
+        <div class="topbar-shop-text">
+          <span class="topbar-shop-label">Signed in as</span>
+          <strong id="topbarShop">&mdash;</strong>
+        </div>
+      </div>
+    </div>
+
+    <!-- ---------- DASHBOARD VIEW ---------- -->
+    <section id="view-dashboard" class="view">
+
+      <header class="page-head page-head--simple">
+        <h1>Dashboard</h1>
+      </header>
+
+      <div class="class-cards">
+      <article class="class-card class-card--fast">
+        <span class="class-card-label">Fast moving</span>
+        <strong class="class-card-value">&#8377;<span id="valFast">0</span></strong>
+        <span class="class-card-sub"><span id="unitsFast">0</span> units &middot; <span id="countFast">0</span> products</span>
+        <div class="class-card-bar"><span id="barFast"></span></div>
+        <span class="class-card-pct"><span id="pctFast">0</span>% of total stock value</span>
+        <button type="button" class="btn-ghost class-card-btn" data-class="FAST">View units &amp; products</button>
+      </article>
+      <article class="class-card class-card--slow">
+        <span class="class-card-label">Slow moving</span>
+        <strong class="class-card-value">&#8377;<span id="valSlow">0</span></strong>
+        <span class="class-card-sub"><span id="unitsSlow">0</span> units &middot; <span id="countSlow">0</span> products</span>
+        <div class="class-card-bar"><span id="barSlow"></span></div>
+        <span class="class-card-pct"><span id="pctSlow">0</span>% of total stock value</span>
+        <button type="button" class="btn-ghost class-card-btn" data-class="SLOW">View units &amp; products</button>
+      </article>
+      <article class="class-card class-card--dead">
+        <span class="class-card-label">Dead stock</span>
+        <strong class="class-card-value">&#8377;<span id="valDead">0</span></strong>
+        <span class="class-card-sub"><span id="unitsDead">0</span> units &middot; <span id="countDead">0</span> products</span>
+        <div class="class-card-bar"><span id="barDead"></span></div>
+        <span class="class-card-pct"><span id="pctDead">0</span>% of total stock value</span>
+        <button type="button" class="btn-ghost class-card-btn" data-class="DEAD">View units &amp; products</button>
+      </article>
+      </div>
+
+      <div class="alert-banner" id="alertBanner" hidden>
+        <span class="alert-banner-dot"></span>
+        <div class="alert-banner-text">
+          <strong id="alertBannerTitle"></strong>
+          <span id="alertBannerSub"></span>
+        </div>
+        <button type="button" class="btn-ghost" data-go="alerts">Review &amp; reorder</button>
+      </div>
+
+      <div class="panel-row">
+        <div class="panel chart-panel">
+          <div class="panel-head">
+            <h2>Locked capital by category</h2>
+            <div class="legend-inline">
+              <span><i class="dot dot-fast"></i>Fast</span>
+              <span><i class="dot dot-slow"></i>Slow</span>
+              <span><i class="dot dot-dead"></i>Dead</span>
+            </div>
+          </div>
+          <svg id="barChart" class="bar-chart" role="img" aria-label="Locked capital by category"></svg>
+        </div>
+
+        <div class="panel donut-panel">
+          <div class="panel-head">
+            <h2>Classification mix</h2>
+            <span class="panel-head-note">by product count</span>
+          </div>
+          <div class="donut-wrap">
+            <svg id="donutChart" viewBox="0 0 160 160" role="img" aria-label="Classification mix"></svg>
+            <ul class="donut-legend" id="donutLegend"></ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel-row panel-row--even">
+        <div class="panel chart-panel">
+          <div class="panel-head">
+            <h2>Units sold over time</h2>
+            <span class="panel-head-note" id="trendNote"></span>
+          </div>
+          <svg id="trendChart" class="bar-chart" role="img" aria-label="Units sold over time"></svg>
+        </div>
+
+        <div class="panel risk-panel">
+          <div class="panel-head">
+            <h2>Needs attention first</h2>
+            <span class="panel-head-note">highest risk score</span>
+            <button id="snapshotBtn" class="btn-ghost">Save snapshot</button>
+          </div>
+          <ol id="riskList" class="risk-list"></ol>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ---------- PRODUCT VIEW (full table) ---------- -->
+    <section id="view-ledger" class="view" hidden>
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Every product, one place</p>
+          <h1>Products</h1>
+        </div>
+        <div class="head-actions"><button type="button" id="importBtn" class="btn-ghost" title="CSV columns: name, category, stock, cost, sold (optional)">Import CSV</button><input type="file" id="importFile" accept=".csv,text/csv" hidden><button type="button" id="addToggle" class="btn-primary">+ Add product</button></div>
+      </header>
+      <form class="panel form-panel" id="productForm" novalidate hidden>
+        <div class="panel-head"><h2>New product</h2><button type="button" class="btn-ghost" id="addCancel">Cancel</button></div>
+        <div class="form-grid form-grid--4">
+          <label class="field">
+            <span>Product name</span>
+            <input required id="f_name" type="text" placeholder="e.g. Wireless Mouse">
+          </label>
+          <label class="field">
+            <span>Category</span>
+            <input required id="f_category" type="text" placeholder="e.g. Electronics">
+          </label>
+          <label class="field">
+            <span>Opening stock (units)</span>
+            <input required id="f_stock" type="number" min="0" step="1">
+            <small class="field-err" id="err_stock"></small>
+          </label>
+          <label class="field">
+            <span>Cost per unit (&#8377;)</span>
+            <input required id="f_cost" type="number" min="0" step="0.01">
+            <small class="field-err" id="err_cost"></small>
+          </label>
+        </div>
+
+        <div class="form-preview" id="formPreview">
+          <div><span>Sell-Through Rate</span><strong id="pv_str">&mdash;</strong></div>
+          <div><span>Locked Capital</span><strong id="pv_locked">&mdash;</strong></div>
+          <div><span>Risk Score</span><strong id="pv_risk">&mdash;</strong></div>
+          <div><span>Classification</span><strong id="pv_status">&mdash;</strong></div>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn-primary">Save product</button>
+        </div>
+      </form>
+      <div class="panel">
+        <div class="panel-head">
+          <h2>All products</h2>
+          <div class="ledger-tools">
+            <input type="search" id="searchBox2" placeholder="Search a product&hellip;">
+            <div class="filter-group" id="filterGroup">
+              <button class="filter-chip is-active" data-filter="ALL">All</button>
+              <button class="filter-chip" data-filter="FAST">Fast</button>
+              <button class="filter-chip" data-filter="SLOW">Slow</button>
+              <button class="filter-chip" data-filter="DEAD">Dead</button>
+            </div>
+          </div>
+        </div>
+        <div class="table-wrap table-wrap--scroll">
+          <table class="ledger">
+            <thead>
+              <tr>
+                <th>Product</th>
+                <th>Category</th>
+                <th class="num">Stock</th>
+                <th class="num">Cost / Unit</th>
+                <th class="num">Sold</th>
+                <th class="num">Left</th>
+                <th class="num">Sell-Through</th>
+                <th class="num">Locked &#8377;</th>
+                <th class="num">Risk</th>
+                <th>Status</th><th>Recommended action</th><th class="num">ABC</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="ledgerBodyFull"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- ALERTS VIEW ---------- -->
+    <section id="view-alerts" class="view" hidden>
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Purchase list</p>
+          <h1>Reorder alerts</h1>
+        </div>
+        <button type="button" id="alertsCsv" class="btn-ghost">Download list (.csv)</button>
+      </header>
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Products to purchase</h2>
+          <span class="panel-head-note" id="alertsNote"></span>
+        </div>
+        <div class="table-wrap table-wrap--scroll">
+          <table class="ledger">
+            <thead>
+              <tr><th>Product</th><th>Category</th><th class="num">Sold (30 days)</th><th class="num">Units left</th><th class="num">Alert level</th><th class="num">Cost / Unit</th><th>Urgency</th></tr>
+            </thead>
+            <tbody id="alertsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- RECORD SALE VIEW ---------- -->
+    <section id="view-sale" class="view" hidden>
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Sales Record</p>
+          <h1>Log units sold.</h1>
+        </div>
+        <p class="page-head-note">
+          Each entry is dated, so the Sell-Through Rate recalculates correctly
+          whichever tracking period (30 / 60 / 90 days) you have selected.
+        </p>
+      </header>
+
+      <form class="panel form-panel" id="saleForm" novalidate>
+        <div class="form-grid">
+          <label class="field field--wide">
+            <span>Product</span>
+            <select required id="s_product"></select>
+          </label>
+          <label class="field">
+            <span>Units sold</span>
+            <input required id="s_qty" type="number" min="0" step="1">
+            <small class="field-err" id="err_qty"></small>
+          </label>
+          <label class="field">
+            <span>Date of sale</span>
+            <input required id="s_date" type="date">
+          </label>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn-primary">Log sale</button>
+          <span class="form-msg" id="saleMsg"></span>
+        </div>
+      </form>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Recent sales</h2>
+          <span class="panel-head-note">most recent first</span>
+        </div>
+        <div class="table-wrap table-wrap--scroll">
+          <table class="ledger">
+            <thead><tr><th>Product</th><th class="num">Qty</th><th>Date</th><th></th></tr></thead>
+            <tbody id="salesBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- HISTORY VIEW ---------- -->
+    <section id="view-history" class="view" hidden>
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Classification History</p>
+          <h1>How status has changed over time.</h1>
+        </div>
+        <button id="snapshotBtn2" class="btn-primary">Save snapshot now</button>
+      </header>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h2>Snapshot log</h2>
+          <span class="panel-head-note">newest first</span>
+        </div>
+        <div class="table-wrap table-wrap--scroll">
+          <table class="ledger">
+            <thead>
+              <tr><th>Saved</th><th>Product</th><th class="num">Sell-Through</th><th class="num">Locked &#8377;</th><th class="num">Risk</th><th>Status</th></tr>
+            </thead>
+            <tbody id="historyBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ---------- SETTINGS VIEW ---------- -->
+    <section id="view-settings" class="view" hidden>
+      <header class="page-head">
+        <div>
+          <p class="eyebrow">Configurable thresholds</p>
+          <h1>Tune classification to your shop.</h1>
+        </div>
+        <p class="page-head-note">Different shops sell at different speeds. Set the bands that suit yours.</p>
+      </header>
+
+      <form class="panel form-panel" id="settingsForm">
+        <div class="form-grid form-grid--3">
+          <label class="field">
+            <span>FAST MOVING threshold (Sell-Through &ge;)</span>
+            <input required id="t_fast" type="number" min="1" max="99" step="1">
+          </label>
+          <label class="field">
+            <span>DEAD STOCK threshold (Sell-Through &lt;)</span>
+            <input required id="t_dead" type="number" min="0" max="98" step="1">
+          </label>
+          <label class="field">
+            <span>REORDER alert level (units left &le;)</span>
+            <input required id="t_low" type="number" min="0" step="1">
+          </label>
+        </div>
+        <label class="field" style="margin-top:14px"><span>Category overrides (optional) &mdash; one per line: <em>Category, fast %, dead %</em></span><textarea id="t_cats" rows="3" placeholder="Groceries, 60, 10"></textarea></label>
+        <p class="settings-note">
+          Everything between these two lines is classified SLOW MOVING.
+          Changing a threshold re-classifies every product immediately.
+          When a product's units left (stock &minus; units sold in the tracking period) drops to the alert level, you are told it needs to be purchased &mdash; with a popup, the bell icon, and the Alerts page.
+        </p>
+        <div class="form-actions">
+          <button type="submit" class="btn-primary">Save settings</button>
+          <span class="form-msg" id="settingsMsg"></span>
+        </div>
+      </form>
+
+      <div class="panel form-panel">
+        <div class="panel-head"><h2>Backup &amp; restore</h2></div>
+        <p class="settings-note">Your data lives in this browser only. Download a backup regularly; restore it here or on another device.</p>
+        <div class="form-actions">
+          <button type="button" id="backupBtn" class="btn-primary">Download backup (.json)</button>
+          <button type="button" id="restoreBtn" class="btn-ghost">Restore from backup</button>
+          <button type="button" id="sampleBtn" class="btn-ghost">Load sample data</button>
+          <input type="file" id="restoreFile" accept=".json,application/json" hidden>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h2>Account</h2></div>
+        <dl class="acct">
+          <div><dt>Shop</dt><dd id="acctShop">&mdash;</dd></div>
+          <div><dt>Username</dt><dd id="acctUser">&mdash;</dd></div>
+        </dl>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ---------- EDIT PRODUCT MODAL ---------- -->
+<div id="editModal" class="modal-backdrop" hidden>
+  <form class="modal-card" id="editForm" novalidate>
+    <h3>Update product</h3>
+    <input type="hidden" id="e_id">
+    <div class="form-grid">
+      <label class="field">
+        <span>Product name</span>
+        <input required id="e_name" type="text">
+      </label>
+      <label class="field">
+        <span>Category</span>
+        <input required id="e_category" type="text">
+      </label>
+      <label class="field">
+        <span>Current stock (units)</span>
+        <input required id="e_stock" type="number" min="0" step="1">
+      </label>
+      <label class="field">
+        <span>Cost per unit (&#8377;)</span>
+        <input required id="e_cost" type="number" min="0" step="0.01">
+      </label>
+    </div>
+    <div class="form-actions">
+      <button type="submit" class="btn-primary">Save changes</button>
+      <button type="button" class="btn-ghost" id="editCancel">Cancel</button>
+    </div>
+  </form>
+</div>
+
+<!-- ---------- CLASSIFICATION DETAIL MODAL ---------- -->
+<div id="classModal" class="modal-backdrop" hidden>
+  <div class="modal-card modal-card--wide" role="dialog" aria-modal="true" aria-labelledby="classModalTitle">
+    <div class="modal-head">
+      <h3 id="classModalTitle">Products</h3>
+      <button type="button" class="btn-ghost" id="classModalClose">Close</button>
+    </div>
+    <div class="table-wrap table-wrap--scroll">
+      <table class="ledger">
+        <thead>
+          <tr><th>Product</th><th>Category</th><th class="num">Units</th><th class="num">Sold</th><th class="num">Value &#8377;</th></tr>
+        </thead>
+        <tbody id="classModalBody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="toasts" class="toasts" aria-live="polite"></div>
+<div id="chartTip" class="chart-tip" hidden></div>
+
+<script src="js/engine.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
