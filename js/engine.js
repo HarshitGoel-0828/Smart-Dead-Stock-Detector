@@ -2,6 +2,7 @@
 (function (root) {
   "use strict";
   const DAY = 86400000;
+  const E_err = (m) => m !== "";
   const Engine = {
     // Local calendar date (YYYY-MM-DD). toISOString() is UTC, which gives "yesterday" in India before 5:30 AM.
     localDate(d) {
@@ -32,6 +33,21 @@
     isDuplicate(products, name, category, exceptId) {
       const n = String(name || "").trim().toLowerCase(), c = String(category || "General").trim().toLowerCase();
       return products.some(p => p.id !== exceptId && p.name.trim().toLowerCase() === n && String(p.category || "General").trim().toLowerCase() === c);
+    },
+    // Validates a backup file before it replaces the shop's data. Returns an error message or "".
+    validateBackup(d) {
+      if (!d || d.app !== "smart-dead-stock-detector") return "That file is not a valid backup.";
+      if (!Array.isArray(d.products) || !Array.isArray(d.sales)) return "Backup is missing products or sales.";
+      const okP = (p) => p && typeof p.id === "string" && typeof p.name === "string" && Number.isFinite(Number(p.stock)) && Number.isFinite(Number(p.cost)) && Number(p.stock) >= 0 && Number(p.cost) >= 0;
+      const okS = (s) => s && typeof s.productId === "string" && Number.isFinite(Number(s.qty)) && Number(s.qty) >= 0 && /^\d{4}-\d{2}-\d{2}$/.test(String(s.date));
+      if (!d.products.every(okP)) return "Backup contains an invalid product record.";
+      const ids = new Set(d.products.map(p => p.id));
+      if (!d.sales.every(s => okS(s) && ids.has(s.productId))) return "Backup contains an invalid or orphaned sales record.";
+      if (d.settings) {
+        const s = d.settings;
+        if (E_err(this.validateThresholds(Number(s.fast), Number(s.dead), Number(s.lowStock)))) return "Backup contains invalid threshold settings.";
+      }
+      return "";
     },
     soldInPeriod(productId, sales, days, now) {
       const cutoff = new Date(now || Date.now()); cutoff.setDate(cutoff.getDate() - days);

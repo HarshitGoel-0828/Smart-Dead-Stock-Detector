@@ -68,3 +68,11 @@ test("isDuplicate ignores case/spacing and can exclude the product being edited"
   assert.equal(E.isDuplicate(list, "USB Cable", "Home"), false);
   assert.equal(E.isDuplicate(list, "USB Cable", "Accessories", "p1"), false);
 });
+test("validateBackup accepts a good file and rejects broken ones", () => {
+  const good = { app: "smart-dead-stock-detector", products: [{ id: "p1", name: "A", stock: 5, cost: 10 }], sales: [{ productId: "p1", qty: 2, date: "2026-11-20" }], settings: { fast: 40, dead: 5, lowStock: 5 } };
+  assert.equal(E.validateBackup(good), "");
+  assert.match(E.validateBackup(null), /not a valid backup/);
+  assert.match(E.validateBackup({ ...good, products: [{ id: "p1", name: "A", stock: -1, cost: 10 }] }), /invalid product/);
+  assert.match(E.validateBackup({ ...good, sales: [{ productId: "zzz", qty: 1, date: "2026-11-20" }] }), /orphaned/);
+  assert.match(E.validateBackup({ ...good, settings: { fast: 5, dead: 40, lowStock: 5 } }), /threshold/);
+});

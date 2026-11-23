@@ -895,8 +895,8 @@
     const rd = new FileReader();
     rd.onload = () => {
       let d; try { d = JSON.parse(rd.result); } catch (err) { toast("That file is not a valid backup."); return; }
-      const okP = (p) => p && typeof p.id === "string" && typeof p.name === "string" && isFinite(p.stock) && isFinite(p.cost);
-      if (!d || d.app !== "smart-dead-stock-detector" || !Array.isArray(d.products) || !Array.isArray(d.sales) || !d.products.every(okP)){ toast("That file is not a valid backup."); return; }
+      const bErr = Engine.validateBackup(d);
+      if (bErr){ toast(bErr); return; }
       if (!confirm("Restoring replaces ALL current data for this shop. Continue?")) return;
       Store.saveProducts(d.products); Store.saveSales(d.sales); Store.saveHistory(Array.isArray(d.history) ? d.history : []);
       Store.saveSettings(Object.assign({ fast: 40, dead: 5, lowStock: 5, cats: {} }, d.settings || {}));
