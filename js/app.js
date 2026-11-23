@@ -685,14 +685,10 @@
   $("#editForm").addEventListener("submit", (e) => {
     e.preventDefault();
     const id = $("#e_id").value;
-    const stock = parseFloat($("#e_stock").value);
-    const cost = parseFloat($("#e_cost").value);
-    if (stock < 0 || cost < 0){ alert("Stock and cost can't be negative."); return; }
-    const products = Store.products().map(p => p.id === id ? Object.assign({}, p, {
-      name: $("#e_name").value.trim(),
-      category: $("#e_category").value.trim(),
-      stock, cost,
-    }) : p);
+    const all = Store.products();
+    const v = Engine.validateProduct({ name: $("#e_name").value, category: $("#e_category").value, stock: $("#e_stock").value, cost: $("#e_cost").value }, all, id);
+    if (v.error){ toast(v.error); return; }
+    const products = all.map(p => p.id === id ? Object.assign({}, p, v.product) : p);
     Store.saveProducts(products);
     $("#editModal").hidden = true;
     renderAll();
@@ -749,16 +745,10 @@
     const okCost = validateNonNegative("f_cost","err_cost");
     if (!okStock || !okCost) return;
 
-    const p = {
-      id: uid("p"),
-      name: $("#f_name").value.trim(),
-      category: $("#f_category").value.trim() || "General",
-      stock: Math.round(parseFloat($("#f_stock").value) || 0), added: todayISO(),
-      cost: parseFloat($("#f_cost").value) || 0,
-    };
-    if (!p.name){ toast("Enter a product name."); return; }
     const list = Store.products();
-    if (Engine.isDuplicate(list, p.name, p.category)){ toast(p.name + " already exists in " + p.category + ". Edit it instead."); return; }
+    const v = Engine.validateProduct({ name: $("#f_name").value, category: $("#f_category").value, stock: $("#f_stock").value, cost: $("#f_cost").value }, list);
+    if (v.error){ toast(v.error); return; }
+    const p = Object.assign({ id: uid("p"), added: todayISO() }, v.product);
     list.push(p); Store.saveProducts(list);
     renderAll();
     e.target.reset();

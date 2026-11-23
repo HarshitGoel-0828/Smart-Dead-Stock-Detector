@@ -117,3 +117,14 @@ test("a product with zero stock is not flagged as dead stock", () => {
   assert.equal(r[0].locked, 0);
   assert.match(r[0].action, /No stock on hand/);
 });
+test("validateProduct cleans input and rejects bad values", () => {
+  const list = [{ id: "p1", name: "USB Cable", category: "Accessories" }];
+  const ok = E.validateProduct({ name: "  Lamp ", category: "", stock: "12", cost: "450" }, list);
+  assert.deepEqual(ok, { error: "", product: { name: "Lamp", category: "General", stock: 12, cost: 450 } });
+  assert.match(E.validateProduct({ name: "", category: "", stock: 1, cost: 1 }, list).error, /name/);
+  assert.match(E.validateProduct({ name: "A", category: "", stock: "", cost: 1 }, list).error, /Stock/ ) ;
+  assert.match(E.validateProduct({ name: "A", category: "", stock: 1.5, cost: 1 }, list).error, /whole/);
+  assert.match(E.validateProduct({ name: "A", category: "", stock: 1, cost: -1 }, list).error, /Cost/);
+  assert.match(E.validateProduct({ name: "usb cable", category: "accessories", stock: 1, cost: 1 }, list).error, /already exists/);
+  assert.equal(E.validateProduct({ name: "usb cable", category: "accessories", stock: 1, cost: 1 }, list, "p1").error, "");
+});

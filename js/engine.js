@@ -34,6 +34,20 @@
       const n = String(name || "").trim().toLowerCase(), c = String(category || "General").trim().toLowerCase();
       return products.some(p => p.id !== exceptId && p.name.trim().toLowerCase() === n && String(p.category || "General").trim().toLowerCase() === c);
     },
+    // Validates a product form (add or edit). Returns { error, product } where product is cleaned up when error is "".
+    validateProduct(f, products, exceptId) {
+      const name = String(f.name || "").trim(), category = String(f.category || "").trim() || "General";
+      const stock = Number(f.stock), cost = Number(f.cost);
+      if (!name) return { error: "Enter a product name." };
+      if (name.length > 80) return { error: "Product name is too long (80 characters max)." };
+      if (String(f.stock).trim() === "") return { error: "Stock is required." };
+      if (String(f.cost).trim() === "") return { error: "Cost per unit is required." };
+      if (!Number.isFinite(stock) || stock < 0) return { error: "Stock must be 0 or more." };
+      if (!Number.isInteger(stock)) return { error: "Stock must be a whole number." };
+      if (!Number.isFinite(cost) || cost < 0) return { error: "Cost per unit must be 0 or more." };
+      if (this.isDuplicate(products, name, category, exceptId)) return { error: name + " already exists in " + category + "." };
+      return { error: "", product: { name, category, stock, cost } };
+    },
     // Validates a backup file before it replaces the shop's data. Returns an error message or "".
     validateBackup(d) {
       if (!d || d.app !== "smart-dead-stock-detector") return "That file is not a valid backup.";
