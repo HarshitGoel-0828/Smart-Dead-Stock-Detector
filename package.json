@@ -1,0 +1,10 @@
+{
+  "name": "smart-dead-stock-detector",
+  "version": "1.0.0",
+  "description": "Inventory intelligence for small shops: classifies products as Fast, Slow or Dead stock and shows locked capital.",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/"
+  },
+  "license": "MIT"
+}
