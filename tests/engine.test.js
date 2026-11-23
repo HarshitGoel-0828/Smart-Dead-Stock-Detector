@@ -42,3 +42,7 @@ test("CSV parser handles quotes, commas, CRLF, blank lines", () => {
   const g = E.parseCsv('name,category\r\n"Cable, USB",Acc\r\n\r\n"He said ""hi""",X');
   assert.deepEqual(g, [["name", "category"], ["Cable, USB", "Acc"], ['He said "hi"', "X"]]);
 });
+test("localDate gives the local calendar day, not the UTC day", () => {
+  const d = new Date(2026, 10, 23, 1, 30); // 23 Nov 2026, 01:30 local time
+  assert.equal(E.localDate(d), "2026-11-23");
+});

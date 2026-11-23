@@ -22,7 +22,7 @@
 
   const $ = (sel, root) => (root || document).querySelector(sel);
   const $all = (sel, root) => Array.from((root || document).querySelectorAll(sel));
-  const todayISO = () => new Date().toISOString().slice(0, 10);
+  const todayISO = () => Engine.localDate();
   const uid = (p) => (p || "id") + crypto.randomUUID().slice(0, 8);
   const rupee = (n) => Math.round(n).toLocaleString("en-IN");
   const escapeHtml = (s) => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
@@ -118,7 +118,7 @@
     seedIfEmpty(){
       if (this.products().length) return;
       const today = new Date();
-      const daysAgo = (n) => { const d = new Date(today); d.setDate(d.getDate() - n); return d.toISOString().slice(0,10); };
+      const daysAgo = (n) => { const d = new Date(today); d.setDate(d.getDate() - n); return Engine.localDate(d); };
 
       const products = [
         { id: uid("p"), name: "Wireless Mouse",    category: "Electronics", stock: 25, cost: 380 },

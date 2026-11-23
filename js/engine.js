@@ -3,6 +3,11 @@
   "use strict";
   const DAY = 86400000;
   const Engine = {
+    // Local calendar date (YYYY-MM-DD). toISOString() is UTC, which gives "yesterday" in India before 5:30 AM.
+    localDate(d) {
+      const x = d ? new Date(d) : new Date(), p = (n) => String(n).padStart(2, "0");
+      return x.getFullYear() + "-" + p(x.getMonth() + 1) + "-" + p(x.getDate());
+    },
     soldInPeriod(productId, sales, days, now) {
       const cutoff = new Date(now || Date.now()); cutoff.setDate(cutoff.getDate() - days);
       return sales.filter(s => s.productId === productId && new Date(s.date) >= cutoff)
