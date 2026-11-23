@@ -622,7 +622,7 @@
     $all("th.sortable").forEach(x => x.setAttribute("aria-sort", x === th ? (sortDir === "asc" ? "ascending" : "descending") : "none"));
     renderAll();
   }));
-  $("#trackingPeriod").addEventListener("change", renderAll);
+  $("#trackingPeriod").addEventListener("change", () => { Store.set("period", trackingDays()); renderAll(); });
 
   /* ============================================================
      ROW ACTIONS: delete product / delete sale / open edit modal
@@ -975,6 +975,8 @@
     prevAlerts = null;
     $("#authScreen").hidden = true;
     $("#appShell").hidden = false;
+    const savedDays = String(Store.get("period", 30));
+    if ([...$("#trackingPeriod").options].some(o => o.value === savedDays)) $("#trackingPeriod").value = savedDays;
     switchView("dashboard");
     renderFormPreview();
     renderAll();
