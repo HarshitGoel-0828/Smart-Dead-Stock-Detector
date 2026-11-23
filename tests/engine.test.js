@@ -1,4 +1,4 @@
-// Run: node --test tests/
+// Run: npm test   (or: node --test)
 const test = require("node:test"), assert = require("node:assert");
 const E = require("../js/engine.js"), T = { fast: 40, dead: 5, lowStock: 5 };
 test("TC01 locked capital", () => assert.equal(E.lockedCapital(40, 3, 80), 2960));

@@ -4,7 +4,7 @@
   "description": "Inventory intelligence for small shops: classifies products as Fast, Slow or Dead stock and shows locked capital.",
   "private": true,
   "scripts": {
-    "test": "node --test tests/"
+    "test": "node --test"
   },
   "license": "MIT"
 }
