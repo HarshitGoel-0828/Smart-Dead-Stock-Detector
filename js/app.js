@@ -862,20 +862,13 @@
     const rd = new FileReader();
     rd.onload = () => {
       const grid = Engine.parseCsv(String(rd.result).replace(/^\uFEFF/, ""));
-      const head = (grid.shift() || []).map(h => h.trim().toLowerCase()), ix = (n) => head.indexOf(n);
-      if (["name", "category", "stock", "cost"].some(n => ix(n) < 0)){ toast("CSV needs columns: name, category, stock, cost (optional: sold)."); return; }
-      const products = Store.products(), sales = Store.sales(); let added = 0, updated = 0, skipped = 0;
-      grid.forEach(r => {
-        const name = (r[ix("name")] || "").trim().replace(/^'(?=[=+\-@])/, ""), category = (r[ix("category")] || "").trim() || "General";
-        const stock = Math.round(num(r[ix("stock")])), cost = num(r[ix("cost")]), sold = ix("sold") < 0 ? 0 : Math.round(num(r[ix("sold")]) || 0);
-        if (!name || !isFinite(stock) || !isFinite(cost) || stock < 0 || cost < 0 || sold < 0 || sold > stock){ skipped++; return; }
-        let p = products.find(x => x.name.toLowerCase() === name.toLowerCase() && x.category.toLowerCase() === category.toLowerCase());
-        if (p){ p.stock = stock; p.cost = cost; updated++; }
-        else { p = { id: uid("p"), name, category, stock, cost, added: todayISO() }; products.push(p); added++; }
-        if (sold > 0) sales.push({ id: uid("s"), productId: p.id, qty: sold, date: todayISO() });
-      });
-      Store.saveProducts(products); Store.saveSales(sales); renderAll();
-      toast("Import finished: " + added + " added, " + updated + " updated, " + skipped + " skipped.");
+      const res = Engine.importRows(grid, Store.products(), () => uid("p"), todayISO());
+      if (res.error){ toast(res.error); return; }
+      const sales = Store.sales().concat(res.sales);
+      Store.saveProducts(res.products); Store.saveSales(sales); renderAll();
+      let msg = "Import finished: " + res.added + " added, " + res.updated + " updated, " + res.skipped.length + " skipped.";
+      if (res.skipped.length) msg += " First problem: line " + res.skipped[0].line + " - " + res.skipped[0].reason + ".";
+      toast(msg);
     };
     rd.readAsText(file); e.target.value = "";
   });

@@ -139,3 +139,22 @@ test("sortRows sorts text and numbers, with nulls last", () => {
   assert.deepEqual(E.sortRows(rows, "v", "asc").map(x => x.v), [1, 5, null]);
   assert.deepEqual(E.sortRows(rows, "v", "desc").map(x => x.v), [5, 1, null]);
 });
+test("importRows adds, updates and reports skipped rows with reasons", () => {
+  let n = 0; const id = () => "id" + (++n);
+  const existing = [{ id: "p1", name: "Notebook", category: "Stationery", stock: 10, cost: 5, added: "2026-01-01" }];
+  const grid = E.parseCsv("name,category,stock,cost,sold\nnotebook,stationery,50,6,4\nPen,Stationery,20,3,0\n,Stationery,5,5,0\nBad,Home,abc,5,0\nOver,Home,5,5,9");
+  const r = E.importRows(grid, existing, id, "2026-11-23");
+  assert.equal(r.error, "");
+  assert.equal(r.added, 1);
+  assert.equal(r.updated, 1);
+  assert.deepEqual(r.skipped.map(s => s.line), [4, 5, 6]);
+  assert.match(r.skipped[0].reason, /name is empty/);
+  assert.match(r.skipped[2].reason, /more than stock/);
+  assert.equal(r.products.find(p => p.id === "p1").stock, 50);
+  assert.equal(r.sales.length, 1);
+  assert.equal(existing[0].stock, 10); // the input list is not mutated
+});
+test("importRows reports missing columns", () => {
+  const r = E.importRows(E.parseCsv("name,stock\nA,1"), [], () => "x", "2026-11-23");
+  assert.match(r.error, /category, cost/);
+});

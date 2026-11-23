@@ -69,6 +69,31 @@
         return m * (x - y);
       });
     },
+    // Pure CSV import: turns parsed CSV rows into product/sale changes and a list of skipped rows with reasons.
+    // `products` is the shop's existing list (not modified); `idGen` creates ids, `today` is YYYY-MM-DD.
+    importRows(grid, products, idGen, today) {
+      const head = (grid[0] || []).map(h => String(h).trim().toLowerCase()), ix = (n) => head.indexOf(n);
+      const need = ["name", "category", "stock", "cost"].filter(n => ix(n) < 0);
+      if (need.length) return { error: "CSV is missing column(s): " + need.join(", ") + ".", products, sales: [], added: 0, updated: 0, skipped: [] };
+      const out = products.map(p => Object.assign({}, p)), sales = [], skipped = []; let added = 0, updated = 0;
+      const toNum = (v) => (v == null || String(v).trim() === "") ? NaN : Number(v);
+      grid.slice(1).forEach((r, i) => {
+        const line = i + 2, why = (m) => skipped.push({ line, reason: m });
+        const name = String(r[ix("name")] || "").trim().replace(/^'(?=[=+\-@])/, ""), category = String(r[ix("category")] || "").trim() || "General";
+        const stock = toNum(r[ix("stock")]), cost = toNum(r[ix("cost")]);
+        const sold = ix("sold") < 0 ? 0 : (String(r[ix("sold")] || "").trim() === "" ? 0 : toNum(r[ix("sold")]));
+        if (!name) return why("name is empty");
+        if (!Number.isFinite(stock) || stock < 0 || !Number.isInteger(stock)) return why("stock must be a whole number, 0 or more");
+        if (!Number.isFinite(cost) || cost < 0) return why("cost must be a number, 0 or more");
+        if (!Number.isFinite(sold) || sold < 0 || !Number.isInteger(sold)) return why("sold must be a whole number, 0 or more");
+        if (sold > stock) return why("sold is more than stock");
+        let p = out.find(x => x.name.trim().toLowerCase() === name.toLowerCase() && String(x.category || "General").trim().toLowerCase() === category.toLowerCase());
+        if (p) { p.stock = stock; p.cost = cost; updated++; }
+        else { p = { id: idGen(), name, category, stock, cost, added: today }; out.push(p); added++; }
+        if (sold > 0) sales.push({ id: idGen(), productId: p.id, qty: sold, date: today });
+      });
+      return { error: "", products: out, sales, added, updated, skipped };
+    },
     // Validates a backup file before it replaces the shop's data. Returns an error message or "".
     validateBackup(d) {
       if (!d || d.app !== "smart-dead-stock-detector") return "That file is not a valid backup.";
