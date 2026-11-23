@@ -109,3 +109,11 @@ test("ABC with no stock value puts everything in class C", () => {
 test("CSV parser handles a UTF-8 BOM-free header and a trailing newline", () => {
   assert.deepEqual(E.parseCsv("a,b\n1,2\n"), [["a", "b"], ["1", "2"]]);
 });
+test("a product with zero stock is not flagged as dead stock", () => {
+  const T = { fast: 40, dead: 5, lowStock: 5 };
+  const r = E.enrich([{ id: "z", name: "Empty", category: "c", stock: 0, cost: 50, added: "2026-01-01" }], [], 30, T, Date.parse("2026-11-23"));
+  assert.equal(r[0].status, "SLOW");
+  assert.equal(r[0].risk, 0);
+  assert.equal(r[0].locked, 0);
+  assert.match(r[0].action, /No stock on hand/);
+});

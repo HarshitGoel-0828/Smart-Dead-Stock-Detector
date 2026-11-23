@@ -79,7 +79,8 @@
       if (!product.added) return false;
       return Math.floor(((now || Date.now()) - new Date(product.added).getTime()) / DAY) < days;
     },
-    status(sold, str, t, isNew) {
+    status(sold, str, t, isNew, stock) {
+      if (stock === 0) return "SLOW"; // nothing on the shelf, so nothing is "dead" - it just needs restocking or removal
       if (isNew && sold === 0) return "SLOW";
       if (sold === 0 || str < t.dead) return "DEAD";
       return str >= t.fast ? "FAST" : "SLOW";
@@ -90,6 +91,7 @@
     },
     // Recommended next step for the shop owner.
     action(r, t) {
+      if (r.stock === 0) return "No stock on hand \u2013 restock or remove";
       if (r.isNew && r.sold === 0) return "New item \u2013 review after " + "the tracking period";
       if (r.left <= t.lowStock && r.status !== "DEAD") return r.left === 0 ? "Out of stock \u2013 reorder now" : "Reorder now";
       if (r.status === "DEAD") return r.locked > 0 ? "Stop buying \u2013 discount 20-30% to clear" : "Stop buying";
@@ -129,8 +131,8 @@
           sold, sold30: this.soldInPeriod(p.id, sales, 30, now), str, left, isNew, daysSince,
           locked: this.lockedCapital(p.stock, sold, p.cost),
           cover: this.daysOfCover(left, sold, days),
-          risk: this.riskScore(str, daysSince),
-          status: this.status(sold, str, tt, isNew),
+          risk: p.stock === 0 ? 0 : this.riskScore(str, daysSince),
+          status: this.status(sold, str, tt, isNew, p.stock),
           low: left <= t.lowStock
         });
       });
