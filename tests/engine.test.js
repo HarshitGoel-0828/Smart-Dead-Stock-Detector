@@ -76,3 +76,36 @@ test("validateBackup accepts a good file and rejects broken ones", () => {
   assert.match(E.validateBackup({ ...good, sales: [{ productId: "zzz", qty: 1, date: "2026-11-20" }] }), /orphaned/);
   assert.match(E.validateBackup({ ...good, settings: { fast: 5, dead: 40, lowStock: 5 } }), /threshold/);
 });
+test("enrich: end-to-end classification of a small shop", () => {
+  const now = Date.parse("2026-11-23T12:00:00");
+  const products = [
+    { id: "a", name: "Mouse", category: "Electronics", stock: 25, cost: 80, added: "2026-01-01" },
+    { id: "b", name: "USB Cable", category: "Accessories", stock: 40, cost: 80, added: "2026-01-01" },
+    { id: "c", name: "Old Keyboard", category: "Electronics", stock: 15, cost: 300, added: "2026-01-01" }
+  ];
+  const sales = [{ productId: "a", qty: 22, date: "2026-11-20" }, { productId: "b", qty: 3, date: "2026-11-10" }];
+  const r = E.enrich(products, sales, 30, { fast: 40, dead: 5, lowStock: 5 }, now);
+  assert.deepEqual(r.map(x => x.status), ["FAST", "SLOW", "DEAD"]);
+  assert.equal(r[1].locked, 2960);       // (40 - 3) x 80
+  assert.equal(r[2].locked, 4500);       // 15 x 300, nothing sold
+  assert.equal(r[0].left, 3);
+  assert.match(r[0].action, /Reorder/);  // 3 left <= low-stock level of 5
+});
+test("status boundaries: exactly 5% is SLOW, exactly 40% is FAST", () => {
+  const t = { fast: 40, dead: 5 };
+  assert.equal(E.status(1, E.str(20, 1), t, false), "SLOW");
+  assert.equal(E.status(2, E.str(5, 2), t, false), "FAST");
+  assert.equal(E.status(0, 0, t, false), "DEAD");
+});
+test("per-category thresholds change the status", () => {
+  const t = { fast: 40, dead: 5, lowStock: 1, cats: { groceries: { fast: 60, dead: 10 } } };
+  const p = [{ id: "g", name: "Rice", category: "Groceries", stock: 100, cost: 50, added: "2026-01-01" }];
+  const r = E.enrich(p, [{ productId: "g", qty: 50, date: "2026-11-20" }], 30, t, Date.parse("2026-11-23"));
+  assert.equal(r[0].status, "SLOW"); // 50% is FAST under the default, but groceries need 60%
+});
+test("ABC with no stock value puts everything in class C", () => {
+  assert.deepEqual(E.abc([{ locked: 0 }, { locked: 0 }]).map(x => x.abc), ["C", "C"]);
+});
+test("CSV parser handles a UTF-8 BOM-free header and a trailing newline", () => {
+  assert.deepEqual(E.parseCsv("a,b\n1,2\n"), [["a", "b"], ["1", "2"]]);
+});
