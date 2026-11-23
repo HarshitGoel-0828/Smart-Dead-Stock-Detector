@@ -161,7 +161,7 @@
      ============================================================ */
   let activeFilter = "ALL";
   let searchTerm = "";
-  let sortKey = null, sortDir = "asc";
+  let sortKey = null, sortDir = "asc", categoryTerm = "";
   let prevAlerts = null;
 
   function trackingDays(){
@@ -440,7 +440,8 @@
     let filtered = data.filter(r => {
       const matchesFilter = activeFilter === "ALL" || r.status === activeFilter;
       const matchesSearch = r.name.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchesFilter && matchesSearch;
+      const matchesCategory = !categoryTerm || r.category === categoryTerm;
+      return matchesFilter && matchesSearch && matchesCategory;
     });
 
     if (sortKey && tbodyId === "ledgerBodyFull") filtered = Engine.sortRows(filtered, sortKey, sortDir);
@@ -533,6 +534,7 @@
     renderTrend();
     renderDonut(data);
     renderRisk(data);
+    renderCategoryFilter();
     renderTable(data, "ledgerBodyFull");
     renderSalesTable();
     renderHistoryTable();
@@ -615,6 +617,16 @@
     });
   });
   $("#searchBox2").addEventListener("input", (e) => { searchTerm = e.target.value; renderAll(); });
+  // Category dropdown is rebuilt from the products so it always lists the categories in use.
+  function renderCategoryFilter(){
+    const sel = $("#categoryFilter"); if (!sel) return;
+    const cats = [...new Set(Store.products().map(p => p.category))].sort((a, b) => a.localeCompare(b));
+    if (categoryTerm && !cats.includes(categoryTerm)) categoryTerm = "";
+    sel.innerHTML = '<option value="">All categories</option>' + cats.map(c => '<option value="' + escapeHtml(c) + '">' + escapeHtml(c) + '</option>').join("");
+    sel.value = categoryTerm;
+  }
+  $("#categoryFilter").addEventListener("change", (e) => { categoryTerm = e.target.value; renderAll(); });
+  $("#printBtn").addEventListener("click", () => window.print());
   // Click a column heading to sort; click again to reverse.
   $all("th.sortable").forEach(th => th.querySelector("button").addEventListener("click", () => {
     const key = th.dataset.sort;

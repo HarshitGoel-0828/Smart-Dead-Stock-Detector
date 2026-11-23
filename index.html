@@ -266,7 +266,9 @@
         <div class="panel-head">
           <h2>All products</h2>
           <div class="ledger-tools">
-            <input type="search" id="searchBox2" placeholder="Search a product&hellip;">
+            <input type="search" id="searchBox2" placeholder="Search a product&hellip;" aria-label="Search products">
+            <select id="categoryFilter" aria-label="Filter by category"><option value="">All categories</option></select>
+            <button type="button" id="printBtn" class="btn-ghost">Print</button>
             <div class="filter-group" id="filterGroup">
               <button class="filter-chip is-active" data-filter="ALL">All</button>
               <button class="filter-chip" data-filter="FAST">Fast</button>
