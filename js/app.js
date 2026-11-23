@@ -466,7 +466,7 @@
         '<td class="num">' + r.risk + '</td>' +
         '<td><span class="tag tag-' + r.status + '">' + r.status + '</span></td>' +
         '<td class="act">' + escapeHtml(r.action) + '</td><td class="num"><span class="abc abc-' + r.abc + '">' + r.abc + '</span></td>' +
-        '<td><button class="row-del" data-id="' + r.id + '" title="Remove product">&times;</button></td>';
+        '<td><button class="row-del" data-id="' + r.id + '" title="Remove product" aria-label="Remove product ' + escapeHtml(r.name) + '">&times;</button></td>';
       tbody.appendChild(tr);
     });
   }
@@ -488,7 +488,7 @@
         '<td class="name">' + escapeHtml(nameOf(s.productId)) + '</td>' +
         '<td class="num">' + s.qty + '</td>' +
         '<td>' + s.date + '</td>' +
-        '<td><button class="row-del" data-sale-id="' + s.id + '" title="Remove entry">&times;</button></td>';
+        '<td><button class="row-del" data-sale-id="' + s.id + '" title="Remove entry" aria-label="Remove sales entry for ' + escapeHtml(nameOf(s.productId)) + '">&times;</button></td>';
       tbody.appendChild(tr);
     });
   }

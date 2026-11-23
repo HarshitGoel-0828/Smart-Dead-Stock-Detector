@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+<a class="skip-link" href="#main">Skip to main content</a>
 
 <!-- ===================== AUTH GATE ===================== -->
 <div id="authScreen" class="auth-screen">
@@ -106,7 +107,7 @@
   </aside>
 
   <!-- ===================== MAIN ===================== -->
-  <main class="main">
+  <main class="main" id="main" tabindex="-1">
 
     <div class="topbar">
       <div class="bell-wrap" id="bellWrap">
@@ -352,7 +353,7 @@
         </div>
         <div class="form-actions">
           <button type="submit" class="btn-primary">Log sale</button>
-          <span class="form-msg" id="saleMsg"></span>
+          <span class="form-msg" id="saleMsg" role="status" aria-live="polite"></span>
         </div>
       </form>
 
@@ -429,7 +430,7 @@
         </p>
         <div class="form-actions">
           <button type="submit" class="btn-primary">Save settings</button>
-          <span class="form-msg" id="settingsMsg"></span>
+          <span class="form-msg" id="settingsMsg" role="status" aria-live="polite"></span>
         </div>
       </form>
 
@@ -504,7 +505,7 @@
   </div>
 </div>
 
-<div id="toasts" class="toasts" aria-live="polite"></div>
+<div id="toasts" class="toasts" role="status" aria-live="polite"></div>
 <div id="chartTip" class="chart-tip" hidden></div>
 
 <script src="js/engine.js"></script>
