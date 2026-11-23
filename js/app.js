@@ -821,13 +821,9 @@
     const fast = parseInt($("#t_fast").value, 10);
     const dead = parseInt($("#t_dead").value, 10);
     const lowStock = parseInt($("#t_low").value, 10);
-    if (isNaN(lowStock) || lowStock < 0){
-      $("#settingsMsg").textContent = "Low-stock alert must be 0 or more.";
-      $("#settingsMsg").style.color = "var(--dead)";
-      return;
-    }
-    if (dead >= fast){
-      $("#settingsMsg").textContent = "The DEAD threshold must be lower than the FAST threshold.";
+    const thErr = Engine.validateThresholds(fast, dead, lowStock);
+    if (thErr){
+      $("#settingsMsg").textContent = thErr;
       $("#settingsMsg").style.color = "var(--dead)";
       return;
     }

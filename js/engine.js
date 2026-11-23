@@ -8,6 +8,26 @@
       const x = d ? new Date(d) : new Date(), p = (n) => String(n).padStart(2, "0");
       return x.getFullYear() + "-" + p(x.getMonth() + 1) + "-" + p(x.getDate());
     },
+    // ---- Input validation (pure functions so they can be unit-tested) ----
+    // Returns an error message, or "" when the thresholds are acceptable.
+    validateThresholds(fast, dead, low) {
+      if (![fast, dead, low].every(Number.isFinite)) return "Enter a number in every threshold field.";
+      if (!Number.isInteger(fast) || !Number.isInteger(dead) || !Number.isInteger(low)) return "Thresholds must be whole numbers.";
+      if (fast < 1 || fast > 99) return "The FAST threshold must be between 1 and 99.";
+      if (dead < 0 || dead > 98) return "The DEAD threshold must be between 0 and 98.";
+      if (low < 0) return "Low-stock alert must be 0 or more.";
+      if (dead >= fast) return "The DEAD threshold must be lower than the FAST threshold.";
+      return "";
+    },
+    // A sale must be a whole number of units, at least 1, no more than what is left, and not dated in the future.
+    validateSale(qty, left, date, today) {
+      if (!Number.isFinite(qty) || qty <= 0) return "Enter at least 1 unit sold.";
+      if (!Number.isInteger(qty)) return "Units sold must be a whole number.";
+      if (qty > left) return "Only " + left + " unit(s) left in stock for this period.";
+      if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return "Choose a valid date.";
+      if (today && date > today) return "Sale date cannot be in the future.";
+      return "";
+    },
     soldInPeriod(productId, sales, days, now) {
       const cutoff = new Date(now || Date.now()); cutoff.setDate(cutoff.getDate() - days);
       return sales.filter(s => s.productId === productId && new Date(s.date) >= cutoff)

@@ -46,3 +46,11 @@ test("localDate gives the local calendar day, not the UTC day", () => {
   const d = new Date(2026, 10, 23, 1, 30); // 23 Nov 2026, 01:30 local time
   assert.equal(E.localDate(d), "2026-11-23");
 });
+test("validateThresholds rejects blanks, bad ranges and dead >= fast", () => {
+  assert.equal(E.validateThresholds(40, 5, 5), "");
+  assert.match(E.validateThresholds(NaN, 5, 5), /number/i);
+  assert.match(E.validateThresholds(40, 40, 5), /lower than/);
+  assert.match(E.validateThresholds(100, 5, 5), /between 1 and 99/);
+  assert.match(E.validateThresholds(40, 5, -1), /0 or more/);
+  assert.match(E.validateThresholds(40.5, 5, 5), /whole/);
+});
