@@ -54,3 +54,11 @@ test("validateThresholds rejects blanks, bad ranges and dead >= fast", () => {
   assert.match(E.validateThresholds(40, 5, -1), /0 or more/);
   assert.match(E.validateThresholds(40.5, 5, 5), /whole/);
 });
+test("validateSale checks quantity, stock left and date", () => {
+  assert.equal(E.validateSale(3, 10, "2026-11-20", "2026-11-23"), "");
+  assert.match(E.validateSale(0, 10, "2026-11-20", "2026-11-23"), /at least 1/);
+  assert.match(E.validateSale(2.5, 10, "2026-11-20", "2026-11-23"), /whole/);
+  assert.match(E.validateSale(11, 10, "2026-11-20", "2026-11-23"), /Only 10/);
+  assert.match(E.validateSale(1, 10, "2026-11-30", "2026-11-23"), /future/);
+  assert.match(E.validateSale(1, 10, "", "2026-11-23"), /valid date/);
+});

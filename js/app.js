@@ -773,9 +773,14 @@
     e.preventDefault();
     if (!validateNonNegative("s_qty","err_qty")) return;
     const productId = $("#s_product").value;
-    const qty = parseFloat($("#s_qty").value) || 0;
+    const qty = Number($("#s_qty").value);
     const date = $("#s_date").value || todayISO();
-    if (!productId){ $("#saleMsg").textContent = "Add a product first."; return; }
+    const msg = $("#saleMsg");
+    if (!productId){ msg.textContent = "Add a product first."; return; }
+    const row = rows().find(x => x.id === productId);
+    const err = Engine.validateSale(qty, row ? row.left : 0, date, todayISO());
+    if (err){ msg.style.color = "var(--dead)"; msg.textContent = err; return; }
+    msg.style.color = "";
 
     const sales = Store.sales();
     sales.push({ id: uid("s"), productId, qty, date });
@@ -786,7 +791,6 @@
 
     renderAll();
     $("#s_qty").value = "";
-    const msg = $("#saleMsg");
     msg.textContent = "Logged " + qty + " unit(s) sold.";
     setTimeout(() => { msg.textContent = ""; }, 3000);
   });
