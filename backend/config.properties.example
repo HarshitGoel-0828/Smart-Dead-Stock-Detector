@@ -1,0 +1,3 @@
+db.url=jdbc:mysql://localhost:3306/dead_stock_detector?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Kolkata
+db.user=root
+db.password=CHANGE_ME
