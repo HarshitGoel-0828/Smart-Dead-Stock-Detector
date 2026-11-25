@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.3.0
+- Activity log: the server records product, sale and settings changes, logins and password changes in MySQL; the History page shows them.
+- Change password from Settings (checks the current password and logs out other devices).
+- Sample data now saves correctly to the server; save errors are shown once instead of repeatedly.
+
 ## 1.2.0
 - The recommended action now includes a suggested clearance discount: 25-35% for dead stock (more the longer it has gone unsold) and 10-15% for slow items at higher risk.
 - Backend: Java server with MySQL storage, server-side login and a validated data API; the app now saves to MySQL instead of the browser.

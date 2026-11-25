@@ -54,6 +54,8 @@ window.SDDApi = (function () {
       sessionStorage.removeItem(K_TOKEN); sessionStorage.removeItem(K_SHOP); sessionStorage.removeItem(K_USER);
     },
     loadState: () => call("GET", "/api/state"),
+    activity: () => call("GET", "/api/activity"),
+    changePassword: (current, newPassword) => call("POST", "/api/password", { current, newPassword }),
 
     /** name is products | sales | history | settings */
     save(name, value) {

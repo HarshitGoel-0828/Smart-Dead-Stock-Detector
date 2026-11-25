@@ -270,4 +270,57 @@ public class MySqlStore implements DataStore {
             ps.executeUpdate();
         }
     }
+
+    // ---------------- activity log ----------------
+    @Override
+    public void log(int userId, String action, String details) throws SQLException {
+        String sql = "INSERT INTO activity_log (user_id, action, details) VALUES (?,?,?)";
+        try (Connection c = Db.get(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            ps.setString(2, action.length() > 40 ? action.substring(0, 40) : action);
+            ps.setString(3, details.length() > 255 ? details.substring(0, 252) + "..." : details);
+            ps.executeUpdate();
+        }
+    }
+
+    @Override
+    public List<Map<String, Object>> activity(int userId, int limit) throws SQLException {
+        String sql = "SELECT action, details, created_at FROM activity_log WHERE user_id = ? ORDER BY log_id DESC LIMIT ?";
+        List<Map<String, Object>> out = new ArrayList<>();
+        try (Connection c = Db.get(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            ps.setInt(2, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> e = new LinkedHashMap<>();
+                    e.put("action", rs.getString(1));
+                    e.put("details", rs.getString(2));
+                    e.put("at", rs.getTimestamp(3).toLocalDateTime().withNano(0).toString().replace('T', ' '));
+                    out.add(e);
+                }
+            }
+        }
+        return out;
+    }
+
+    // ---------------- account ----------------
+    @Override
+    public String[] userById(int userId) throws SQLException {
+        String sql = "SELECT shop_name, password_hash FROM users WHERE user_id = ?";
+        try (Connection c = Db.get(); PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next() ? new String[] { rs.getString(1), rs.getString(2) } : null;
+            }
+        }
+    }
+
+    @Override
+    public void updatePassword(int userId, String newHash) throws SQLException {
+        try (Connection c = Db.get(); PreparedStatement ps = c.prepareStatement("UPDATE users SET password_hash = ? WHERE user_id = ?")) {
+            ps.setString(1, newHash);
+            ps.setInt(2, userId);
+            ps.executeUpdate();
+        }
+    }
 }
