@@ -22,6 +22,8 @@ public class RouteTest {
         r = req("POST", "/api/products", t1, "[]"); check("wrong method -> 405", r.statusCode() == 405, r.body());
         String prods = "[{\"id\":\"p1\",\"name\":\"USB Cable\",\"category\":\"Accessories\",\"stock\":40,\"cost\":80,\"added\":\"2026-01-01\"},{\"id\":\"p2\",\"name\":\"Mouse\",\"category\":\"\",\"stock\":25,\"cost\":80.5,\"added\":\"2026-02-01\"}]";
         r = req("PUT", "/api/products", t1, prods); check("save products", r.statusCode() == 200 && r.body().contains("\"saved\":2"), r.body());
+        r = req("PUT", "/api/products", t1, "[{\"id\":\"nodate\",\"name\":\"Old Backup Item\",\"category\":\"x\",\"stock\":1,\"cost\":1}]"); check("missing date added defaults to today", r.statusCode() == 200, r.body());
+        r = req("PUT", "/api/products", t1, prods); check("restore normal list", r.statusCode() == 200, r.body());
         r = req("PUT", "/api/products", t1, "[{\"id\":\"p1\",\"name\":\"\",\"category\":\"x\",\"stock\":1,\"cost\":1,\"added\":\"2026-01-01\"}]"); check("blank name -> 400", r.statusCode() == 400, r.body());
         r = req("PUT", "/api/products", t1, "[{\"id\":\"p1\",\"name\":\"A\",\"category\":\"x\",\"stock\":-5,\"cost\":1,\"added\":\"2026-01-01\"}]"); check("negative stock -> 400", r.statusCode() == 400, r.body());
         r = req("PUT", "/api/products", t1, "[{\"id\":\"p1\",\"name\":\"A\",\"category\":\"x\",\"stock\":1.5,\"cost\":1,\"added\":\"2026-01-01\"}]"); check("decimal stock -> 400", r.statusCode() == 400, r.body());

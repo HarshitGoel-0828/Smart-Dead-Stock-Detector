@@ -29,7 +29,7 @@ public class Validate {
             if (cat.isEmpty()) cat = "General";
             long stock = whole(m.get("stock"), 0, 100_000_000L, "Stock");
             double cost = decimal(m.get("cost"), 0, 100_000_000d, "Cost");
-            String added = date(m.get("added"), "Date added");
+            String added = m.get("added") == null ? LocalDate.now().toString() : date(m.get("added"), "Date added"); // older backups have no date
             if (!ids.add(id)) throw new Invalid("Duplicate product id " + id);
             if (!keys.add((name + "|" + cat).toLowerCase())) throw new Invalid(name + " appears twice in " + cat);
             Map<String, Object> p = new LinkedHashMap<>();
