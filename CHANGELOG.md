@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.0
+- The recommended action now includes a suggested clearance discount: 25-35% for dead stock (more the longer it has gone unsold) and 10-15% for slow items at higher risk.
+- Backend: Java server with MySQL storage, server-side login and a validated data API; the app now saves to MySQL instead of the browser.
+
 ## 1.1.0
 ### Fixed
 - "Today" now uses the local date; before, sales entered before 5:30 AM in India were dated yesterday.
