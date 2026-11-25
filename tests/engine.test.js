@@ -158,3 +158,21 @@ test("importRows reports missing columns", () => {
   const r = E.importRows(E.parseCsv("name,stock\nA,1"), [], () => "x", "2026-11-23");
   assert.match(r.error, /category, cost/);
 });
+test("suggestDiscount deepens with time unsold and never applies to fast or empty items", () => {
+  assert.equal(E.suggestDiscount({ stock: 10, locked: 500, status: "DEAD", daysSince: 20, risk: 90 }), 25);
+  assert.equal(E.suggestDiscount({ stock: 10, locked: 500, status: "DEAD", daysSince: 60, risk: 90 }), 30);
+  assert.equal(E.suggestDiscount({ stock: 10, locked: 500, status: "DEAD", daysSince: 999, risk: 100 }), 35);
+  assert.equal(E.suggestDiscount({ stock: 10, locked: 500, status: "SLOW", daysSince: 30, risk: 72 }), 15);
+  assert.equal(E.suggestDiscount({ stock: 10, locked: 500, status: "SLOW", daysSince: 30, risk: 55 }), 10);
+  assert.equal(E.suggestDiscount({ stock: 10, locked: 500, status: "SLOW", daysSince: 5, risk: 30 }), 0);
+  assert.equal(E.suggestDiscount({ stock: 10, locked: 500, status: "FAST", daysSince: 1, risk: 5 }), 0);
+  assert.equal(E.suggestDiscount({ stock: 0, locked: 0, status: "SLOW", daysSince: 999, risk: 0 }), 0);
+});
+test("recommended action mentions the suggested discount", () => {
+  const T = { fast: 40, dead: 5, lowStock: 1 };
+  const now = Date.parse("2026-11-23");
+  const p = [{ id: "k", name: "Old Keyboard", category: "Electronics", stock: 15, cost: 300, added: "2026-01-01" }];
+  const r = E.enrich(p, [], 30, T, now);
+  assert.equal(r[0].status, "DEAD");
+  assert.match(r[0].action, /discount ~35%/);
+});
