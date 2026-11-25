@@ -44,6 +44,31 @@ public class RouteTest {
         check("round trip", r.statusCode() == 200 && r.body().contains("\"name\":\"USB Cable\"") && r.body().contains("\"category\":\"General\"") && r.body().contains("\"cost\":80.5") && r.body().contains("\"qty\":3") && r.body().contains("\"period\":60") && r.body().contains("Groceries"), r.body());
         System.out.println(r.body());
         r = req("GET", "/api/state", t2, null); check("user 2 sees nothing of user 1", r.body().contains("\"products\":[]"), r.body());
+        // ---- activity log ----
+        r = req("PUT", "/api/products", t1, "[{\"id\":\"p1\",\"name\":\"USB Cable\",\"category\":\"Accessories\",\"stock\":35,\"cost\":80,\"added\":\"2026-01-01\"}]");
+        check("edit + remove product", r.statusCode() == 200, r.body());
+        r = req("GET", "/api/activity", t1, null);
+        String act = r.body();
+        check("activity: edited stock", act.contains("Edited USB Cable: stock 40 -> 35"), act);
+        check("activity: removed product", act.contains("Removed Mouse"), act);
+        check("activity: added product", act.contains("Added USB Cable (Accessories, stock 40, cost Rs 80)"), act);
+        check("activity: sale", act.contains("Recorded sale: 3 x USB Cable (2026-11-20)"), act);
+        check("activity: settings", act.contains("tracking period 30 days -> 60 days") && act.contains("category overrides updated"), act);
+        check("activity: newest first", act.indexOf("Edited USB Cable") < act.indexOf("Recorded sale"), act);
+        r = req("GET", "/api/activity?limit=1", t1, null); check("activity limit", r.body().split("\"action\"").length == 2, r.body());
+        r = req("GET", "/api/activity", t2, null); check("activity is private per user", r.body().equals("[]"), r.body());
+        r = req("GET", "/api/activity", null, null); check("activity needs login", r.statusCode() == 401, r.body());
+        // ---- change password ----
+        String t1b = Auth.newSession(1);
+        r = req("POST", "/api/password", null, "{\"current\":\"oldpass1\",\"newPassword\":\"newpass99\"}"); check("password needs login", r.statusCode() == 401, r.body());
+        r = req("POST", "/api/password", t1, "{\"current\":\"WRONG\",\"newPassword\":\"newpass99\"}"); check("wrong current password -> 400 (not 401)", r.statusCode() == 400 && r.body().contains("incorrect"), r.body());
+        r = req("POST", "/api/password", t1, "{\"current\":\"oldpass1\",\"newPassword\":\"abc\"}"); check("too short -> 400", r.statusCode() == 400, r.body());
+        r = req("POST", "/api/password", t1, "{\"current\":\"oldpass1\",\"newPassword\":\"oldpass1\"}"); check("same password -> 400", r.statusCode() == 400, r.body());
+        r = req("POST", "/api/password", t1, "{\"current\":\"oldpass1\",\"newPassword\":\"newpass99\"}"); check("password changed", r.statusCode() == 200, r.body());
+        check("new password works, old does not", Auth.verifyPassword("newpass99", Server.store.userById(1)[1]) && !Auth.verifyPassword("oldpass1", Server.store.userById(1)[1]), "");
+        r = req("GET", "/api/state", t1b, null); check("other sessions are logged out", r.statusCode() == 401, r.body());
+        r = req("GET", "/api/state", t1, null); check("current session stays logged in", r.statusCode() == 200, r.body());
+        r = req("GET", "/api/activity", t1, null); check("activity: password changed", r.body().contains("Password changed"), r.body());
         r = req("POST", "/api/logout", t1, null); check("logout", r.statusCode() == 200, r.body());
         r = req("GET", "/api/state", t1, null); check("token dead after logout", r.statusCode() == 401, r.body());
         r = req("GET", "/backend/config.properties", null, null); check("config not served", r.statusCode() == 404, r.body());
