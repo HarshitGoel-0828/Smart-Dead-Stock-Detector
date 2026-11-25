@@ -11,7 +11,7 @@
      - dashboard summary cards + bar chart + donut chart
      - CSV export
      - classification history log
-   Data lives in localStorage, namespaced per shop-owner so one
+   Data lives in MySQL (saved through the Java server), separate for each shop-owner so one
    owner never sees another's ledger (SRS §4.2). Swap the Store
    module for real API calls once the Java + MySQL backend
    (SRS §6.5) exists — nothing else in this file needs to change.
@@ -28,82 +28,67 @@
   const escapeHtml = (s) => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
 
   /* ============================================================
-     AUTH — registration & login with salted SHA-256 hashing
-     via the browser's native Web Crypto API. (A real deployment
-     must still perform this hashing server-side — see SRS §2.3
-     and the note on the Settings view.)
+     AUTH — login and registration are done by the Java server
+     (api.js). The server hashes passwords (PBKDF2) and keeps
+     users in MySQL; the browser only holds a session token.
      ============================================================ */
   const Auth = {
-    usersKey: "sdd_users_v1",
-    sessionKey: "sdd_session_v1",
-
-    allUsers(){
-      try{ return JSON.parse(localStorage.getItem(this.usersKey)) || []; }catch(e){ return []; }
-    },
-    saveUsers(list){ localStorage.setItem(this.usersKey, JSON.stringify(list)); },
-
-    async hash(password, saltHex, legacy){
-      const enc = new TextEncoder(), hex = (buf) => Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2,"0")).join("");
-      if (legacy) return hex(await crypto.subtle.digest("SHA-256", enc.encode(saltHex + ":" + password)));
-      const key = await crypto.subtle.importKey("raw", enc.encode(password), "PBKDF2", false, ["deriveBits"]);
-      return hex(await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", iterations: 150000, salt: enc.encode(saltHex) }, key, 256));
-    },
-    randomSalt(){
-      const arr = crypto.getRandomValues(new Uint8Array(16));
-      return Array.from(arr).map(b => b.toString(16).padStart(2,"0")).join("");
-    },
-
     async register(shop, username, password){
-      const users = this.allUsers();
-      if (users.some(u => u.username.toLowerCase() === username.toLowerCase())){
-        throw new Error("That username is already taken.");
-      }
-      const salt = this.randomSalt();
-      const hash = await this.hash(password, salt);
-      users.push({ shop, username, salt, hash, v: 2 });
-      this.saveUsers(users);
-      this.setSession(username);
+      await SDDApi.register(shop, username, password);
+      await Store.load();
       return true;
     },
     async login(username, password){
-      const users = this.allUsers();
-      const u = users.find(x => x.username.toLowerCase() === username.toLowerCase());
-      if (!u) throw new Error("No account with that username.");
-      const hash = await this.hash(password, u.salt, !u.v);
-      if (hash !== u.hash) throw new Error("Incorrect password.");
-      this.setSession(username);
+      await SDDApi.login(username, password);
+      await Store.load();
       return true;
     },
-    setSession(username){ localStorage.setItem(this.sessionKey, JSON.stringify({ username })); },
-    logout(){ localStorage.removeItem(this.sessionKey); },
-    currentUsername(){
-      try{ return (JSON.parse(localStorage.getItem(this.sessionKey)) || {}).username || null; }catch(e){ return null; }
-    },
+    logout(){ return SDDApi.logout(); },
+    currentUsername(){ return SDDApi.isLoggedIn() ? SDDApi.username() : null; },
     currentUser(){
-      const uname = this.currentUsername();
-      if (!uname) return null;
-      return this.allUsers().find(u => u.username === uname) || null;
-    },
-
+      return SDDApi.isLoggedIn() ? { shop: SDDApi.shopName(), username: SDDApi.username() } : null;
+    }
   };
 
   /* ============================================================
-     STORE — per-shop persistence. Everything is namespaced by
-     the logged-in username, mirroring the SRS's one-owner / many
-     -products, one-product / many-sales schema (§4.2).
+     STORE — an in-memory copy of this shop's data. It is loaded
+     from MySQL after login (Store.load) and every change is sent
+     back to the server (SDDApi.save), so the rest of the app can
+     keep using Store.products(), Store.saveProducts() and so on.
      ============================================================ */
   const Store = {
-    ns(){ return Auth.currentUsername() || "anon"; },
-    key(name){ return "sdd_" + this.ns() + "_" + name + "_v1"; },
+    cache: { products: [], sales: [], history: [], settings: {} },
+
+    async load(){
+      const s = await SDDApi.loadState();
+      this.cache = { products: s.products || [], sales: s.sales || [], history: s.history || [], settings: s.settings || {} };
+    },
 
     get(name, fallback){
-      try{
-        const raw = localStorage.getItem(this.key(name));
-        return raw ? JSON.parse(raw) : fallback;
-      }catch(e){ return fallback; }
+      if (name === "period"){
+        const p = this.cache.settings.period;
+        return p == null ? fallback : p;
+      }
+      const v = this.cache[name];
+      return v == null ? fallback : v;
     },
     set(name, value){
-      try{ localStorage.setItem(this.key(name), JSON.stringify(value)); }catch(e){ /* storage unavailable */ }
+      if (name === "period"){
+        this.cache.settings = Object.assign({}, this.cache.settings, { period: value });
+        this.pushSettings();
+        return;
+      }
+      if (name === "settings"){
+        this.cache.settings = Object.assign({}, this.cache.settings, value);
+        this.pushSettings();
+        return;
+      }
+      this.cache[name] = value;
+      SDDApi.save(name, value);
+    },
+    pushSettings(){
+      const full = Object.assign({ fast: 40, dead: 5, lowStock: 5, cats: {}, period: 30 }, this.cache.settings);
+      SDDApi.save("settings", full);
     },
 
     products(){ return this.get("products", []); },
@@ -112,7 +97,7 @@
     saveSales(list){ this.set("sales", list); },
     history(){ return this.get("history", []); },
     saveHistory(list){ this.set("history", list); },
-    settings(){ return Object.assign({ fast: 40, dead: 5, lowStock: 5, cats: {} }, this.get("settings", {})); },
+    settings(){ return Object.assign({ fast: 40, dead: 5, lowStock: 5, cats: {} }, this.cache.settings); },
     saveSettings(s){ this.set("settings", s); },
 
     seedIfEmpty(){
@@ -958,7 +943,7 @@
     msg.className = "auth-msg";
     const pw = $("#rg_password").value, pw2 = $("#rg_password2").value;
     if (pw !== pw2){ msg.textContent = "Passwords don't match."; return; }
-    if (pw.length < 4){ msg.textContent = "Password must be at least 4 characters."; return; }
+    if (pw.length < 6){ msg.textContent = "Password must be at least 6 characters."; return; }
     try{
       await Auth.register($("#rg_shop").value.trim(), $("#rg_username").value.trim(), pw);
       enterApp();
@@ -969,6 +954,7 @@
 
   $("#logoutBtn").addEventListener("click", () => {
     Auth.logout();
+    Store.cache = { products: [], sales: [], history: [], settings: {} };
     prevAlerts = null;
     closeMenu();
     $("#appShell").hidden = true;
@@ -990,9 +976,18 @@
   /* ============================================================
      INIT
      ============================================================ */
+  // If the server forgets our session (for example it was restarted), go back to the login screen.
+  SDDApi.onAuthLost(() => { SDDApi.logout().finally(() => location.reload()); });
+  // If the server refuses a save, tell the user and reload the real data from MySQL so the screen never disagrees with it.
+  SDDApi.onSaveError(async (err) => {
+    toast("Could not save: " + err.message);
+    try { await Store.load(); renderAll(); } catch (e) { /* server unreachable */ }
+  });
+
   (async function init(){
-    if (Auth.currentUsername()){
-      enterApp();
+    if (SDDApi.isLoggedIn()){
+      try { await Store.load(); enterApp(); }
+      catch (e) { await SDDApi.logout(); }
     }
   })();
 })();
