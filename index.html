@@ -397,6 +397,21 @@
           </table>
         </div>
       </div>
+
+      <div class="panel" style="margin-top:20px">
+        <div class="panel-head">
+          <h2>Activity log</h2>
+          <button type="button" id="activityRefresh" class="btn-ghost">Refresh</button>
+        </div>
+        <div class="table-wrap table-wrap--scroll">
+          <table class="ledger">
+            <thead>
+              <tr><th>When</th><th>What</th><th>Details</th></tr>
+            </thead>
+            <tbody id="activityBody"></tbody>
+          </table>
+        </div>
+      </div>
     </section>
 
     <!-- ---------- SETTINGS VIEW ---------- -->
@@ -454,6 +469,28 @@
           <div><dt>Username</dt><dd id="acctUser">&mdash;</dd></div>
         </dl>
       </div>
+
+      <form class="panel form-panel" id="passwordForm" novalidate>
+        <div class="panel-head"><h2>Change password</h2></div>
+        <div class="form-grid form-grid--3">
+          <label class="field">
+            <span>Current password</span>
+            <input required id="pw_current" type="password" autocomplete="current-password">
+          </label>
+          <label class="field">
+            <span>New password (6+ characters)</span>
+            <input required id="pw_new" type="password" autocomplete="new-password">
+          </label>
+          <label class="field">
+            <span>Repeat new password</span>
+            <input required id="pw_new2" type="password" autocomplete="new-password">
+          </label>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn-primary">Change password</button>
+          <span class="form-msg" id="pwMsg" role="status" aria-live="polite"></span>
+        </div>
+      </form>
     </section>
 
   </main>

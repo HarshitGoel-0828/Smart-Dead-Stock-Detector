@@ -480,6 +480,28 @@
     });
   }
 
+  const ACTIVITY_LABELS = {
+    LOGIN: "Login", REGISTERED: "Account created", PRODUCT_ADDED: "Product added", PRODUCT_EDITED: "Product edited",
+    PRODUCT_REMOVED: "Product removed", PRODUCTS_BULK: "Products updated", SALE_ADDED: "Sale recorded",
+    SALE_REMOVED: "Sale removed", SALES_BULK: "Sales updated", SETTINGS_CHANGED: "Settings changed", PASSWORD_CHANGED: "Password changed"
+  };
+  async function renderActivity(){
+    const tbody = $("#activityBody");
+    if (!tbody) return;
+    try {
+      const list = await SDDApi.activity();
+      if (!list.length){
+        tbody.innerHTML = '<tr><td colspan="3" style="color:var(--muted); padding:20px 12px;">No activity yet.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = list.map(e =>
+        '<tr><td>' + escapeHtml(e.at) + '</td><td class="name">' + escapeHtml(ACTIVITY_LABELS[e.action] || e.action) + '</td><td>' + escapeHtml(e.details) + '</td></tr>'
+      ).join("");
+    } catch (err) {
+      tbody.innerHTML = '<tr><td colspan="3" style="color:var(--dead); padding:20px 12px;">Could not load the activity log: ' + escapeHtml(err.message) + '</td></tr>';
+    }
+  }
+
   function renderHistoryTable(){
     const tbody = $("#historyBody");
     if (!tbody) return;
@@ -540,6 +562,7 @@
     $all(".view").forEach(v => v.hidden = true);
     $("#view-" + view).hidden = false;
     $all(".rail-link").forEach(b => b.classList.toggle("is-active", b.dataset.view === view));
+    if (view === "history") renderActivity();
     if (view === "sale") { $("#s_date").value = todayISO(); populateSaleProductSelect(); }
     if (view === "settings"){
       const s = Store.settings();
@@ -870,6 +893,27 @@
     };
     rd.readAsText(file); e.target.value = "";
   });
+  $("#activityRefresh").addEventListener("click", renderActivity);
+
+  $("#passwordForm").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const msg = $("#pwMsg");
+    const cur = $("#pw_current").value, next = $("#pw_new").value, again = $("#pw_new2").value;
+    const fail = (t) => { msg.style.color = "var(--dead)"; msg.textContent = t; };
+    if (!cur) return fail("Enter your current password.");
+    if (next.length < 6) return fail("New password must be at least 6 characters.");
+    if (next !== again) return fail("The two new passwords do not match.");
+    if (next === cur) return fail("Choose a password different from the current one.");
+    try {
+      await SDDApi.changePassword(cur, next);
+      msg.style.color = "var(--fast)";
+      msg.textContent = "Password changed. Other devices have been logged out.";
+      e.target.reset();
+    } catch (err) {
+      fail(err.message);
+    }
+  });
+
   $("#sampleBtn").addEventListener("click", async () => {
     if (Store.products().length && !confirm("Replace current products and sales with sample data?")) return;
     saveFailed = false;
