@@ -48,6 +48,11 @@ public class Auth {
         return token == null ? null : SESSIONS.get(token);
     }
 
+    /** Logs the user out everywhere except on the device that just changed the password. */
+    public static void endOtherSessions(int userId, String keepToken) {
+        SESSIONS.entrySet().removeIf(e -> e.getValue() == userId && !e.getKey().equals(keepToken));
+    }
+
     public static void endSession(String token) {
         if (token != null) SESSIONS.remove(token);
     }
