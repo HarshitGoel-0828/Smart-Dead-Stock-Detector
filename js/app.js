@@ -106,12 +106,12 @@
       const daysAgo = (n) => { const d = new Date(today); d.setDate(d.getDate() - n); return Engine.localDate(d); };
 
       const products = [
-        { id: uid("p"), name: "Wireless Mouse",    category: "Electronics", stock: 25, cost: 380 },
-        { id: uid("p"), name: "USB Cable",         category: "Accessories", stock: 40, cost: 80  },
-        { id: uid("p"), name: "Old Keyboard",      category: "Electronics", stock: 15, cost: 300 },
-        { id: uid("p"), name: "Bluetooth Speaker", category: "Audio",       stock: 10, cost: 900 },
-        { id: uid("p"), name: "Phone Charger",     category: "Accessories", stock: 30, cost: 150 },
-        { id: uid("p"), name: "Table Lamp",        category: "Home",       stock: 12, cost: 450 },
+        { id: uid("p"), name: "Wireless Mouse",    category: "Electronics", stock: 25, cost: 380, added: daysAgo(200) },
+        { id: uid("p"), name: "USB Cable",         category: "Accessories", stock: 40, cost: 80, added: daysAgo(200)  },
+        { id: uid("p"), name: "Old Keyboard",      category: "Electronics", stock: 15, cost: 300, added: daysAgo(200) },
+        { id: uid("p"), name: "Bluetooth Speaker", category: "Audio",       stock: 10, cost: 900, added: daysAgo(200) },
+        { id: uid("p"), name: "Phone Charger",     category: "Accessories", stock: 30, cost: 150, added: daysAgo(200) },
+        { id: uid("p"), name: "Table Lamp",        category: "Home",       stock: 12, cost: 450, added: daysAgo(200) },
       ];
       this.saveProducts(products);
 
@@ -140,6 +140,7 @@
      ANALYTICS ENGINE — mirrors SRS §6.3–6.4 exactly.
      ============================================================ */
   const Engine = window.SDDEngine;
+  let saveFailed = false;   // set when the server refuses or cannot be reached; reset before bulk actions
 
   /* ============================================================
      APP STATE
@@ -869,9 +870,12 @@
     };
     rd.readAsText(file); e.target.value = "";
   });
-  $("#sampleBtn").addEventListener("click", () => {
+  $("#sampleBtn").addEventListener("click", async () => {
     if (Store.products().length && !confirm("Replace current products and sales with sample data?")) return;
-    Store.saveProducts([]); Store.saveSales([]); Store.seedIfEmpty(); renderAll(); toast("Sample data loaded.");
+    saveFailed = false;
+    Store.saveProducts([]); Store.saveSales([]); Store.seedIfEmpty(); renderAll();
+    await SDDApi.flush();              // wait until the server has really stored everything
+    if (!saveFailed) toast("Sample data loaded and saved.");
   });
   $("#backupBtn").addEventListener("click", () => {
     const data = { app: "smart-dead-stock-detector", version: 1, products: Store.products(), sales: Store.sales(), history: Store.history(), settings: Store.settings() };
@@ -979,8 +983,13 @@
   // If the server forgets our session (for example it was restarted), go back to the login screen.
   SDDApi.onAuthLost(() => { SDDApi.logout().finally(() => location.reload()); });
   // If the server refuses a save, tell the user and reload the real data from MySQL so the screen never disagrees with it.
+  let lastSaveToast = 0;
   SDDApi.onSaveError(async (err) => {
-    toast("Could not save: " + err.message);
+    saveFailed = true;
+    if (Date.now() - lastSaveToast > 4000){        // one message, not one per failed save
+      lastSaveToast = Date.now();
+      toast("Could not save: " + err.message);
+    }
     try { await Store.load(); renderAll(); } catch (e) { /* server unreachable */ }
   });
 
