@@ -3,6 +3,7 @@ window.SDDApi = (function () {
   "use strict";
   const K_TOKEN = "sdd_token", K_SHOP = "sdd_shop", K_USER = "sdd_user";
   let token = sessionStorage.getItem(K_TOKEN);
+  let generation = 0;
   let queue = Promise.resolve();       // saves run one after another, so products always arrive before their sales
   let authLostHandler = null, saveErrorHandler = null;
 
@@ -56,10 +57,13 @@ window.SDDApi = (function () {
 
     /** name is products | sales | history | settings */
     save(name, value) {
+      const gen = generation;                       // saves queued before a failure are dropped (they would write stale data)
       queue = queue
-        .then(() => call("PUT", "/api/" + name, value))
-        .catch((e) => { if (saveErrorHandler) saveErrorHandler(e); });
+        .then(() => (gen !== generation ? undefined : call("PUT", "/api/" + name, value)))
+        .catch((e) => { generation++; if (saveErrorHandler) saveErrorHandler(e); });
       return queue;
-    }
+    },
+    /** Resolves when every queued save has finished (or failed). */
+    flush: () => queue
   };
 })();
