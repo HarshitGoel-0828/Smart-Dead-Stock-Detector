@@ -16,4 +16,13 @@ public interface DataStore {
     /** Returns null when the shop has never saved settings. */
     Map<String, Object> settings(int userId) throws SQLException;
     void saveSettings(int userId, Map<String, Object> settings) throws SQLException;
+
+    /** Adds one line to the activity log. */
+    void log(int userId, String action, String details) throws SQLException;
+    /** Newest first. Each entry has action, details and at (date and time). */
+    List<Map<String, Object>> activity(int userId, int limit) throws SQLException;
+
+    /** Returns { shopName, passwordHash }, or null if there is no such user. */
+    String[] userById(int userId) throws SQLException;
+    void updatePassword(int userId, String newHash) throws SQLException;
 }

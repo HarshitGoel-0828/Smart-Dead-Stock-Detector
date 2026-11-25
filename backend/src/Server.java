@@ -2,6 +2,7 @@ import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -52,6 +53,8 @@ public class Server {
         server.createContext("/api/sales", ex -> save(ex, "sales"));
         server.createContext("/api/history", ex -> save(ex, "history"));
         server.createContext("/api/settings", ex -> save(ex, "settings"));
+        server.createContext("/api/activity", Server::activity);
+        server.createContext("/api/password", Server::password);
         server.createContext("/", Server::staticFile);
         server.start();
         System.out.println("Server running at http://localhost:" + PORT + "  (press Ctrl + C to stop)");
@@ -80,6 +83,7 @@ public class Server {
         try {
             int id = UserDao.create(shop, username, Auth.hashPassword(password));
             if (id < 0) { error(ex, 409, "That username is already taken"); return; }
+            logQuiet(id, "REGISTERED", "Account created for " + shop);
             send(ex, 201, TYPES.get("json"), "{\"token\":" + Json.quote(Auth.newSession(id)) + ",\"shopName\":" + Json.quote(shop) + "}");
         } catch (SQLException e) {
             error(ex, 500, "Database error");
@@ -97,6 +101,7 @@ public class Server {
                 error(ex, 401, "Wrong username or password");
                 return;
             }
+            logQuiet(u.id, "LOGIN", "Logged in");
             send(ex, 200, TYPES.get("json"), "{\"token\":" + Json.quote(Auth.newSession(u.id)) + ",\"shopName\":" + Json.quote(u.shopName) + "}");
         } catch (SQLException e) {
             error(ex, 500, "Database error");
@@ -155,16 +160,24 @@ public class Server {
             int saved;
             switch (what) {
                 case "products": {
+                    List<Map<String, Object>> before = store.products(uid);
                     List<Map<String, Object>> list = Validate.products(body);
                     store.saveProducts(uid, list);
+                    logAll(uid, ActivityLog.productChanges(before, list));
                     saved = list.size();
                     break;
                 }
                 case "sales": {
                     Set<String> ids = new HashSet<>();
-                    for (Map<String, Object> p : store.products(uid)) ids.add((String) p.get("id"));
+                    Map<String, String> names = new HashMap<>();
+                    for (Map<String, Object> p : store.products(uid)) {
+                        ids.add((String) p.get("id"));
+                        names.put((String) p.get("id"), (String) p.get("name"));
+                    }
+                    List<Map<String, Object>> before = store.sales(uid);
                     List<Map<String, Object>> list = Validate.sales(body, ids);
                     store.saveSales(uid, list);
+                    logAll(uid, ActivityLog.saleChanges(before, list, names));
                     saved = list.size();
                     break;
                 }
@@ -175,7 +188,11 @@ public class Server {
                     break;
                 }
                 default: {
-                    store.saveSettings(uid, Validate.settings(body));
+                    Map<String, Object> before = store.settings(uid);
+                    Map<String, Object> now = Validate.settings(body);
+                    store.saveSettings(uid, now);
+                    ActivityLog.Entry change = ActivityLog.settingsChange(before, now);
+                    if (change != null) logQuiet(uid, change.action, change.details);
                     saved = 1;
                 }
             }
@@ -185,6 +202,61 @@ public class Server {
         } catch (SQLIntegrityConstraintViolationException e) {
             e.printStackTrace();
             error(ex, 409, "Conflict: a product or sale with the same name or id already exists");
+        } catch (SQLException e) {
+            dbError(ex, e);
+        }
+    }
+
+
+    /** Writing the activity log must never make a real save fail, so problems are only printed. */
+    static void logQuiet(int uid, String action, String details) {
+        try {
+            store.log(uid, action, details);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    static void logAll(int uid, List<ActivityLog.Entry> entries) {
+        for (ActivityLog.Entry e : entries) logQuiet(uid, e.action, e.details);
+    }
+
+    /** GET /api/activity?limit=100 : the newest log lines for this shop. */
+    static void activity(HttpExchange ex) throws IOException {
+        if (!ex.getRequestMethod().equals("GET")) { error(ex, 405, "Use GET"); return; }
+        Integer uid = auth(ex);
+        if (uid == null) return;
+        int limit = 100;
+        String q = ex.getRequestURI().getQuery();
+        if (q != null && q.startsWith("limit=")) {
+            try { limit = Integer.parseInt(q.substring(6)); } catch (NumberFormatException e) { /* keep 100 */ }
+        }
+        limit = Math.max(1, Math.min(500, limit));
+        try {
+            send(ex, 200, TYPES.get("json"), Json.write(store.activity(uid, limit)));
+        } catch (SQLException e) {
+            dbError(ex, e);
+        }
+    }
+
+    /** POST /api/password {"current":"...","newPassword":"..."} */
+    static void password(HttpExchange ex) throws IOException {
+        Integer uid = auth(ex);
+        if (uid == null) return;
+        Map<String, String> in = readBody(ex);
+        if (in == null) return;
+        String current = in.getOrDefault("current", ""), next = in.getOrDefault("newPassword", "");
+        if (next.length() < 6 || next.length() > 100) { error(ex, 400, "New password must be 6 to 100 characters"); return; }
+        try {
+            String[] user = store.userById(uid);
+            // 400, not 401: a wrong current password must not look like an expired login
+            if (user == null || !Auth.verifyPassword(current, user[1])) { error(ex, 400, "Current password is incorrect"); return; }
+            if (next.equals(current)) { error(ex, 400, "Choose a password different from the current one"); return; }
+            store.updatePassword(uid, Auth.hashPassword(next));
+            String token = ex.getRequestHeaders().getFirst("Authorization").substring(7).trim();
+            Auth.endOtherSessions(uid, token);
+            logQuiet(uid, "PASSWORD_CHANGED", "Password changed");
+            send(ex, 200, TYPES.get("json"), "{\"ok\":true}");
         } catch (SQLException e) {
             dbError(ex, e);
         }
