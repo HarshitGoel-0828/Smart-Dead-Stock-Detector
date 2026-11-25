@@ -11,6 +11,7 @@ BCA project - Microtek College of Management and Technology, Varanasi (VBSPU).
 - Product management: add, edit, categories, duplicate protection, sortable columns, category filter
 - Record sales with validation (whole units, not above stock, no future dates)
 - Dashboard: status counts, locked capital, risk ranking, bar / donut / trend charts
+- Suggested clearance discount for slow and dead items (deeper the longer an item sits unsold)
 - Reorder alerts with a bell menu and a downloadable reorder list
 - Classification history snapshots
 - Per-category thresholds, tracking period of 30 / 60 / 90 days

@@ -154,9 +154,18 @@
       if (r.stock === 0) return "No stock on hand \u2013 restock or remove";
       if (r.isNew && r.sold === 0) return "New item \u2013 review after " + "the tracking period";
       if (r.left <= t.lowStock && r.status !== "DEAD") return r.left === 0 ? "Out of stock \u2013 reorder now" : "Reorder now";
-      if (r.status === "DEAD") return r.locked > 0 ? "Stop buying \u2013 discount 20-30% to clear" : "Stop buying";
-      if (r.status === "SLOW") return r.risk >= 60 ? "Discount 10-15%, hold reorders" : "Monitor sales";
+      const d = this.suggestDiscount(r);
+      if (r.status === "DEAD") return r.locked > 0 ? "Stop buying \u2013 discount ~" + d + "% to clear" : "Stop buying";
+      if (r.status === "SLOW") return d >= 15 ? "Discount ~" + d + "%, hold reorders" : d > 0 ? "Discount ~" + d + "% or bundle" : "Monitor sales";
       return "Keep stocked";
+    },
+    // Suggested clearance discount (%). The longer an item sits unsold, the deeper the cut.
+    // The shop's selling price is not stored, so this is a starting point; even selling at cost frees the locked capital.
+    suggestDiscount(r) {
+      if (r.stock === 0 || r.locked <= 0) return 0;
+      if (r.status === "DEAD") return r.daysSince >= 90 ? 35 : r.daysSince >= 60 ? 30 : 25;
+      if (r.status === "SLOW") return r.risk >= 70 ? 15 : r.risk >= 50 ? 10 : 0;
+      return 0;
     },
     // ABC (Pareto) on locked capital: A = top ~70% of value, B = next ~20%, C = the rest.
     abc(rows) {
